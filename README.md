@@ -12,17 +12,23 @@ package main
 
 import (
     "fmt"
+    "strings"
+
     "github.com/jaksonlin/go-jsonextend"
 )
 
-template:= `{"hello": "world", "name": "this is my ${name}", "age": ${age}}`
-variables:= {"name": "jakson", "age": 18}
+func main() {
+    template := `{"hello": "world", "name": "this is my ${name}", "age": ${age}}`
+    variables := map[string]interface{}{"name": "jakson", "age": 18}
 
-result, err:= jsonextend.Parse(template, variables)
-if err != nil {
-    fmt.Println(err)
+    result, err := jsonextend.Parse(strings.NewReader(template), variables)
+    if err != nil {
+        fmt.Println(err)
+    }
+    fmt.Println(result)
+
 }
-fmt.Println(result)
+
 
 ```
 
