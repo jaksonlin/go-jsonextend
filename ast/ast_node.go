@@ -89,6 +89,11 @@ type JsonNode interface {
 	Visit(visitor JsonVisitor)
 }
 
+type JsonCollectionNode interface {
+	JsonNode
+	Length() int
+}
+
 type JsonStringValueNode interface {
 	JsonNode
 	GetValue() string
@@ -172,6 +177,10 @@ func (node *JsonArrayNode) Append(n JsonNode) {
 	node.Value = append(node.Value, n)
 }
 
+func (node *JsonArrayNode) Length() int {
+	return len(node.Value)
+}
+
 type JsonKeyValuePairNode struct {
 	Key   JsonStringValueNode
 	Value JsonNode
@@ -207,6 +216,10 @@ func (node *JsonObjectNode) Visit(visitor JsonVisitor) {
 
 func (node *JsonObjectNode) Append(kvNode *JsonKeyValuePairNode) {
 	node.Value = append(node.Value, kvNode)
+}
+
+func (node *JsonObjectNode) Length() int {
+	return len(node.Value)
 }
 
 type JsonExtendedVariableNode struct {
