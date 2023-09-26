@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/jaksonlin/go-jsonextend/interpreter"
+	"github.com/jaksonlin/go-jsonextend/tokenizer"
 )
 
 type SomeInterfaceV2 interface {
@@ -306,4 +310,48 @@ func TestAssignThings5(t *testing.T) {
 		fmt.Printf("%#v\n", n)
 	}
 
+}
+
+func TestAssignThings11(t *testing.T) {
+	type test1 struct {
+		Hello     string
+		World     float64
+		Apple     bool
+		Banana    bool
+		something interface{}
+	}
+
+	t1 := test1{"Peter", 100, true, false, nil}
+	data, _ := json.Marshal(t1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var someTest1 test1
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someTest1.Hello != "Peter" {
+		t.FailNow()
+	}
+	if someTest1.World != 100 {
+		t.FailNow()
+	}
+	if someTest1.Apple != true {
+		t.FailNow()
+	}
+	if someTest1.Banana != false {
+		t.FailNow()
+	}
+	if someTest1.something != nil {
+		t.FailNow()
+	}
 }

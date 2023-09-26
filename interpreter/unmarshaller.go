@@ -319,7 +319,7 @@ func (resolver *collectionResolver) resolveKVPrimitiveValue(key string, node ast
 
 	switch rType := node.(type) {
 	case *ast.JsonStringNode:
-		err := resolver.setKVPrimitiveValue(key, string(rType.Value))
+		err := resolver.setKVPrimitiveValue(key, rType.GetValue())
 		if err != nil {
 			return err
 		}
@@ -474,7 +474,7 @@ func (resolver *collectionResolver) processObject() error {
 		return err
 	}
 
-	for i := len(node.Value); i >= 0; i-- {
+	for i := len(node.Value) - 1; i >= 0; i-- {
 		kvpair := node.Value[i]
 		key, err := resolver.getKeyValueKeyFromKvPair(kvpair)
 		if err != nil {
@@ -538,7 +538,7 @@ func (resolver *collectionResolver) processArray() error {
 	if err != nil {
 		return err
 	}
-	for i := len(node.Value); i >= 0; i-- {
+	for i := len(node.Value) - 1; i >= 0; i-- {
 		element := node.Value[i]
 		switch element.GetNodeType() {
 		case ast.AST_ARRAY:

@@ -114,7 +114,11 @@ func (node *JsonStringNode) Visit(visitor JsonVisitor) {
 }
 
 func (node *JsonStringNode) GetValue() string {
-	return string(node.Value)
+	if len(node.Value) == 2 {
+		return "" // empty string with 2 double quotation marks only
+	} else {
+		return string(node.Value[1 : len(node.Value)-1])
+	}
 }
 
 type JsonNumberNode struct {
