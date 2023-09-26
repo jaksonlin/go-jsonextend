@@ -1,6 +1,7 @@
 package interpreter_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -19,26 +20,26 @@ func (i *ImplementingStruct) Method() string {
 }
 
 type SomeStruct struct {
-	Name1  string
-	Name2  []int
-	Name3  map[string]int
-	Name4  []interface{}
-	Name5  []Bro
-	Name6  []*Bro
-	Name7  Bro
-	Name8  *Bro
-	Name9  map[string]interface{}
-	Name10 map[int]Bro
-	Name11 [3]int
-	Name12 MyInterface // pointer
-	Name13 MyInterface // struct
+	Name1  string                 `json:"name1"`
+	Name2  []int                  `json:"name2"`
+	Name3  map[string]int         `json:"name3"` // coded
+	Name4  []interface{}          `json:"name4"`
+	Name5  []Bro                  `json:"name5"`
+	Name6  []*Bro                 `json:"name6"`
+	Name7  Bro                    `json:"name7"`  //coded
+	Name8  *Bro                   `json:"name8"`  //coded
+	Name9  map[string]interface{} `json:"name9"`  //coded
+	Name10 map[int]Bro            `json:"name10"` //go also not support unmarshal, json now allow number as key,
+	Name11 [3]int                 `json:"name11"`
+	Name12 MyInterface            `json:"name12"` // pointer
+	Name13 MyInterface            `json:"name13"` // struct
 	// ... and so on for other cases
-	Name14 []map[string][]interface{}
-	Name15 interface{}
-	Name16 *Bro
-	Name17 map[string]Bro
-	Name18 []int
-	Name19 MyType
+	Name14 []map[string][]interface{} `json:"name14"`
+	Name15 interface{}                `json:"name15"`
+	Name16 *Bro                       `json:"name16"` //coded, for nil, the kv pair len==0, no additional code
+	Name17 map[string]Bro             `json:"name17"`
+	Name18 []int                      `json:"name18"`
+	Name19 MyType                     `json:"name19"`
 }
 
 var (
@@ -98,13 +99,71 @@ func TestInspaceOfGoStruct(t *testing.T) {
 			fmt.Println(f.Kind())
 		}
 	case reflect.Pointer:
-		elm := valueItem.Elem()
-		for i := 0; i < elm.NumField(); i++ {
-			f := valueItem.Field(i)
-			fmt.Println(f.Kind())
+		typeItemElm := typeItem.Elem()
+		valueItemElm := valueItem.Elem()
+		fmt.Println(valueItemElm.Kind())
+		for i := 0; i < typeItemElm.NumField(); i++ {
+			f := typeItemElm.Field(i)
+			v := valueItemElm.Field(i)
+			fmt.Printf("Field Name: %s\n", f.Name)         // Print field name
+			fmt.Printf("Field Value: %v\n", v.Interface()) // Print field value
+			fmt.Printf("Field Kind: %v\n", v.Kind())       // Print field kind
+			fmt.Printf("Field Tag: %v\n", f.Tag)           // Print field tag
+			if jsonTag, ok := f.Tag.Lookup("json"); ok {
+				fmt.Printf("Field JSON Tag: %s\n", jsonTag)
+			}
 		}
 	}
 	fmt.Println("END")
+}
+func TestInspaceOfGoStruct2(t *testing.T) {
+	var anItem interface{} = &test1
+	typeItem := reflect.TypeOf(anItem)
+	var myAnItem reflect.Value
+	var myAnItemType reflect.Type
+	if typeItem.Kind() == reflect.Pointer {
+		myAnItemType = typeItem.Elem()
+		myAnItem = reflect.New(typeItem.Elem())
+	} else {
+		myAnItemType = typeItem
+		myAnItem = reflect.New(typeItem)
+	}
+	fmt.Println(myAnItemType)
+	// new must return ptr
+	myAnItemElm := myAnItem.Elem()
+	fmt.Println(myAnItemElm)
+	for i := 0; i < myAnItemType.NumField(); i++ {
+		f := myAnItemType.Field(i)
+		v := myAnItemElm.Field(i)
+		fmt.Printf("Field Name: %s\n", f.Name)         // Print field name
+		fmt.Printf("Field Value: %v\n", v.Interface()) // Print field value
+		fmt.Printf("Field Kind: %v\n", v.Kind())       // Print field kind
+		if f.Type.Kind() == reflect.Array || f.Type.Kind() == reflect.Slice || f.Type.Kind() == reflect.Pointer {
+			fmt.Printf("element type: %v\n", f.Type.Elem().Kind())
+		} else if f.Type.Kind() == reflect.Map {
+			fmt.Printf("map key type: %v\n", f.Type.Key())
+			fmt.Printf("map element type: %v\n", f.Type.Elem().Kind())
+		}
+		fmt.Printf("Field Tag: %v\n", f.Tag) // Print field tag
+		if jsonTag, ok := f.Tag.Lookup("json"); ok {
+			fmt.Printf("Field JSON Tag: %s\n", jsonTag)
+		}
+		fmt.Println("-------")
+	}
+}
+
+func TestInspaceOfGoStruct3(t *testing.T) {
+	b, err := json.Marshal(test1)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println(string(b))
+	var cv SomeStruct
+	err = json.Unmarshal(b, &cv)
+	if err != nil {
+		t.FailNow()
+	}
+
 }
 
 type MyType int
@@ -139,4 +198,112 @@ func TestGoDefin2(t *testing.T) {
 	slice2 := []interface{}{1, 2, []int{1, 2, 3}}
 	sliceType2 := reflect.TypeOf(slice2).Elem()
 	fmt.Println(sliceType2)
+}
+
+func TestAssignThings(t *testing.T) {
+	type MyStruct struct {
+		Field int
+	}
+
+	type Container struct {
+		MyField MyStruct
+	}
+
+	c := &Container{}
+
+	field := reflect.ValueOf(c).Elem().FieldByName("MyField")
+	fmt.Println(field.Type())
+	newStruct := reflect.New(field.Type()).Elem()
+
+	newStruct.FieldByName("Field").SetInt(100)
+	field.Set(newStruct)
+	fmt.Printf("%#v", c)
+}
+
+func TestAssignThings2(t *testing.T) {
+	type MyStruct struct {
+		Field int
+	}
+
+	type Container struct {
+		MyField *MyStruct
+	}
+
+	c := &Container{}
+
+	field := reflect.ValueOf(c).Elem().FieldByName("MyField") // *MyStruct
+
+	fmt.Println(field.IsNil()) // true
+	fmt.Println(field.Kind())  // ptr
+	fmt.Println(field.Type())  // *interpreter_test.MyStruct
+
+	newStruct := reflect.New(field.Type().Elem()) // not field.Elem().Type(), because field.Elem() is dereferncing, and defernce a nil will panic
+	newStruct.Elem().FieldByName("Field").SetInt(100)
+
+	field.Set(newStruct)
+
+	fmt.Printf("Container's MyField: %+v\n", c.MyField) // Prints Container's MyField: {Field:42}
+
+}
+
+func TestAssignThings4(t *testing.T) {
+	type MyStruct struct {
+		Field int
+	}
+
+	type Container struct {
+		MyField []MyStruct
+	}
+
+	c := &Container{}
+
+	field := reflect.ValueOf(c).Elem().FieldByName("MyField")
+	elementType := field.Type().Elem()
+	sliceElement := reflect.SliceOf(elementType)
+	sliceValue := reflect.MakeSlice(sliceElement, 0, 0)
+
+	for i := 0; i < 5; i++ {
+		element := reflect.New(elementType).Elem() // ptr to MyStruct, ok to append
+		element.FieldByName("Field").SetInt(int64(i))
+		sliceValue = reflect.Append(sliceValue, element)
+	}
+	field.Set(sliceValue)
+
+	fmt.Printf("%#v", c)
+}
+
+func TestAssignThings5(t *testing.T) {
+	type MyStruct struct {
+		Field int
+	}
+
+	type Container struct {
+		MyField []*MyStruct
+	}
+
+	c := &Container{}
+
+	field := reflect.ValueOf(c)
+	if field.Kind() == reflect.Pointer {
+		field = field.Elem()
+	}
+	field = field.FieldByName("MyField")
+	myFieldSliceElementType := field.Type().Elem()
+
+	sliceType := reflect.SliceOf(myFieldSliceElementType)
+	sliceValue := reflect.MakeSlice(sliceType, 0, 0)
+
+	for i := 0; i < 10; i++ {
+		//ptrToStruct := reflect.New(myFieldSliceElementType).Elem() // ptr to ptrMyStruct
+		ptrToStruct := reflect.New(myFieldSliceElementType.Elem()) // ptr to MyStruct
+		ptrToStruct.Elem().FieldByName("Field").SetInt(int64(i))
+		sliceValue = reflect.Append(sliceValue, ptrToStruct)
+
+	}
+	field.Set(sliceValue)
+
+	for _, n := range c.MyField {
+		fmt.Printf("%#v\n", n)
+	}
+
 }

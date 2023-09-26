@@ -1,13 +1,55 @@
 package interpreter
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
+
+const (
+	fieldNotFoundConst = "field %s is not found"
+
+	fieldNotFoundOrCannotSetConst = "field %s is not found or cannot set"
+	ExpectingStructFindOthers     = "expecting struct but find %s"
+	VariableNotFound              = "variable value for %s not found"
+)
 
 var (
-	ErrorInterpreSymbolFailure       = errors.New("have symbol not consumed")
-	ErrorInterpretVariable           = errors.New("error when interpret variable values")
-	ErrorInternalInterpreterOutdated = errors.New("interpreter not update as the ast grows")
+	ErrorInterpreSymbolFailure         = errors.New("have symbol not consumed")
+	ErrorInterpretVariable             = errors.New("error when interpret variable values")
+	ErrorInternalInterpreterOutdated   = errors.New("interpreter not update as the ast grows")
+	ErrorKeyStringVariableNotResolve   = errors.New("find string variable as object key, but the variable value is missing")
+	ErrorVariableValueNotJsonValueType = errors.New("variable value should be json value type")
+	ErrorVariableValueNotFound         = errors.New("variable value is not found")
+	ErrorInternalGetPrimitiveValue     = errors.New("try to get primitive value from none-primitive type")
+	ErrorInternalShouldBeArrayOrSlice  = errors.New("should be array or slice")
+
+	ErrorStringVariableNotResolveOnKeyLocation = errors.New("object key contain string variable that has no variable value")
+	ErrorInternalExpectingPrimitive            = errors.New("expecting primitive values but find others")
 )
 
 var (
 	ErrorUnmarshalNotSlice = errors.New("unmarshal to a non-slice variable")
 )
+
+var (
+	ErrorReflectNotObject     = errors.New("out element is not map nor struct")
+	ErrorReflectInvalidMapKey = errors.New("map key type should be string")
+	ErrOutNotPointer          = errors.New("out is not pointer")
+	ErrOutNotNilPointer       = errors.New("out is nil pointer")
+)
+
+func NewErrorFiledNotFound(fieldName string) error {
+	return fmt.Errorf(fieldNotFoundConst, fieldName)
+}
+
+func NewErrFieldCannotSetOrNotfound(fieldName string) error {
+	return fmt.Errorf(fieldNotFoundOrCannotSetConst, fieldName)
+}
+
+func NewErrorInternalExpectingStructButFindOthers(kind string) error {
+	return fmt.Errorf(ExpectingStructFindOthers, kind)
+}
+
+func NewVariableNotFound(variable string) error {
+	return fmt.Errorf(VariableNotFound, variable)
+}

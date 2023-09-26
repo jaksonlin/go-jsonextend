@@ -30,8 +30,12 @@ func nodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 			Value: make([]*JsonKeyValuePairNode, 0),
 		}, nil
 	case AST_KVPAIR:
+		node, ok := value.(JsonStringValueNode)
+		if !ok {
+			return nil, ErrorASTKeyValuePairNotStringAsKey
+		}
 		return &JsonKeyValuePairNode{
-			Key: value.(JsonNode),
+			Key: node,
 		}, nil
 	case AST_STRING:
 		return &JsonStringNode{
@@ -85,6 +89,11 @@ type JsonNode interface {
 	Visit(visitor JsonVisitor)
 }
 
+type JsonStringValueNode interface {
+	JsonNode
+	GetValue() string
+}
+
 type JsonStringNode struct {
 	Value []byte
 }
@@ -97,6 +106,10 @@ func (node *JsonStringNode) GetNodeType() AST_NODETYPE {
 
 func (node *JsonStringNode) Visit(visitor JsonVisitor) {
 	visitor.VisitStringNode(node)
+}
+
+func (node *JsonStringNode) GetValue() string {
+	return string(node.Value)
 }
 
 type JsonNumberNode struct {
@@ -160,7 +173,7 @@ func (node *JsonArrayNode) Append(n JsonNode) {
 }
 
 type JsonKeyValuePairNode struct {
-	Key   JsonNode
+	Key   JsonStringValueNode
 	Value JsonNode
 }
 
@@ -239,4 +252,8 @@ func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
 	for _, item := range rs {
 		node.Variables[string(item[1])] = item[0]
 	}
+}
+
+func (node *JsonExtendedStringWIthVariableNode) GetValue() string {
+	return node.GetValue()
 }
