@@ -316,12 +316,13 @@ func TestAssignThings11(t *testing.T) {
 	type test1 struct {
 		Hello     string
 		World     float64
+		World2    int
 		Apple     bool
 		Banana    bool
 		something interface{}
 	}
 
-	t1 := test1{"Peter", 100, true, false, nil}
+	t1 := test1{"Peter", 100.123, 100, true, false, nil}
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
 
@@ -342,7 +343,10 @@ func TestAssignThings11(t *testing.T) {
 	if someTest1.Hello != "Peter" {
 		t.FailNow()
 	}
-	if someTest1.World != 100 {
+	if someTest1.World != 100.123 {
+		t.FailNow()
+	}
+	if someTest1.World2 != 100 {
 		t.FailNow()
 	}
 	if someTest1.Apple != true {

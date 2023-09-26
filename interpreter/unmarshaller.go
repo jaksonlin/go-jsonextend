@@ -274,7 +274,11 @@ func (resolver *collectionResolver) setKVPrimitiveValuePointer(key string, value
 		}
 		field := resolver.out.Elem().FieldByName(key)
 		if field.IsValid() && field.CanSet() {
-			field.Set(reflect.ValueOf(value))
+			if field.Kind() == reflect.Int {
+				field.SetInt(int64(value.(float64)))
+			} else {
+				field.Set(reflect.ValueOf(value))
+			}
 		} else {
 			return NewErrFieldCannotSetOrNotfound(key)
 		}
