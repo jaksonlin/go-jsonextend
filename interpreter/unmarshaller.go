@@ -50,6 +50,7 @@ func (c *collectionResolver) createReflectionValueForResolver(kvValueElementType
 	// we only deal with the kv value being collection, primitives are already set
 	var resultValue reflect.Value
 	isPointerValue := false
+
 	if kvValueElementType.Kind() == reflect.Slice {
 		elementType := kvValueElementType.Elem()
 		sliceType := reflect.SliceOf(elementType)
@@ -63,9 +64,6 @@ func (c *collectionResolver) createReflectionValueForResolver(kvValueElementType
 	} else if kvValueElementType.Kind() == reflect.Struct {
 		resultValue = reflect.New(kvValueElementType)
 	} else if kvValueElementType.Kind() == reflect.Pointer {
-		if kvValueElementType.Elem().Kind() != reflect.Struct && kvValueElementType.Elem().Kind() != reflect.Array {
-			return nil, NewErrorInternalFieldTypeNotMatchAST(kvValueElementType.Elem().Name())
-		}
 		isPointerValue = true
 		resultValue = reflect.New(kvValueElementType)
 	} else {
@@ -82,16 +80,14 @@ func (c *collectionResolver) createChildResolverWithObjectKey(key string, node a
 
 	// 1. get the keys coresponding value type
 	var childElementType reflect.Type
-	if c.out.Kind() == reflect.Map {
-		childElementType = c.out.Type().Elem() // map[string]something, something
-	} else if c.out.Kind() == reflect.Struct {
-		fieldInfo := c.out.FieldByName(key) // struct field
-		childElementType = fieldInfo.Type()
-	} else if c.out.Kind() == reflect.Pointer {
-		if c.out.Elem().Kind() != reflect.Struct { // *struct, deference field
-			return nil, NewErrorInternalExpectingStructInsidePointerButFindOthers(c.out.Elem().Kind().String())
-		}
-		fieldInfo := c.out.Elem().FieldByName(key)
+	rootObj := c.out
+	if rootObj.Kind() == reflect.Pointer {
+		rootObj = rootObj.Elem() // value deference
+	}
+	if rootObj.Kind() == reflect.Map {
+		childElementType = rootObj.Type().Elem() // map[string]something, something
+	} else if rootObj.Kind() == reflect.Struct {
+		fieldInfo := rootObj.FieldByName(key) // struct field
 		childElementType = fieldInfo.Type()
 	} else {
 		// current resolver's out is not object type capable
@@ -156,13 +152,25 @@ func (c *collectionResolver) EncloseArray() error {
 func (c *collectionResolver) EncloseObject() error {
 	if c.parent.out.Kind() == reflect.Struct {
 		field := c.parent.out.FieldByName(c.objectKey)
-		field.Set(c.out.Elem())
+		if field.Kind() == reflect.Slice || field.Kind() == reflect.Map {
+			field.Set(c.out) // map and slice are created directly using reflect.MakeMap reflect.MakeSlice
+		} else {
+			field.Set(c.out.Elem()) // originally it is *something, reflect.New create it as *(*something), deference the first `*` and reset the pointer
+		}
 	} else if c.parent.out.Kind() == reflect.Map {
-		c.parent.out.SetMapIndex(reflect.ValueOf(c.objectKey), c.out.Elem())
+		if c.parent.out.Type().Elem().Kind() != reflect.Pointer {
+			c.parent.out.SetMapIndex(reflect.ValueOf(c.objectKey), c.out.Elem()) // deference for none-pointer receiver
+		} else {
+			c.parent.out.SetMapIndex(reflect.ValueOf(c.objectKey), c.out)
+		}
 	} else if c.parent.out.Kind() == reflect.Pointer {
 		if c.parent.out.Elem().Kind() == reflect.Struct {
 			field := c.parent.out.Elem().FieldByName(c.objectKey)
-			field.Set(c.out.Elem())
+			if field.Kind() == reflect.Slice || field.Kind() == reflect.Map {
+				field.Set(c.out) // map and slice are created directly using reflect.MakeMap reflect.MakeSlice
+			} else {
+				field.Set(c.out.Elem()) // originally it is *something, reflect.New create it as *(*something), deference the first `*` and reset the pointer
+			}
 		} else {
 			return NewErrorInternalExpectingStructInsidePointerButFindOthers(c.parent.out.Elem().String())
 		}
@@ -369,16 +377,35 @@ func (resolver *collectionResolver) resolveKVPrimitiveValue(key string, node ast
 }
 
 func (resolver *collectionResolver) setPrimitiveToArray(index int, value interface{}) error {
-	resolver.getResolveLocation().Index(index).Set(reflect.ValueOf(value))
+	resolveLocation := resolver.getResolveLocation()
+	// []*int
+	if resolveLocation.Elem().Kind() == reflect.Pointer {
+		newPtr := reflect.New(resolveLocation.Type().Elem()).Elem()
+		newPtr.Elem().Set(reflect.ValueOf(value))
+		resolveLocation.Index(index).Set(newPtr)
+	} else {
+		//[]int
+		resolveLocation.Index(index).Set(reflect.ValueOf(value))
+	}
+
 	return nil
 }
 
 func (resolver *collectionResolver) setPrimitiveValueToPtrArray(index int, value interface{}) error {
 	resolveLocation := resolver.getResolveLocation()
-	//.Type().Elem() get the array and further Elem get the array element type this prevent deference on reflect.Value which may be nil
-	realValue := resolver.convertNumberBaseOnKind(resolveLocation.Type().Elem().Elem().Kind(), value)
-
-	resolver.getResolveLocation().Elem().Index(index).Set(reflect.ValueOf(realValue))
+	//.Type().Elem() get the array
+	// and further Elem get the array element type this prevent deference on reflect.Value which may be nil
+	arrayElementType := resolveLocation.Type().Elem().Elem()
+	realValue := resolver.convertNumberBaseOnKind(arrayElementType.Kind(), value)
+	//*[]*int
+	if arrayElementType.Kind() == reflect.Pointer {
+		newPtr := reflect.New(arrayElementType).Elem() // new the pointer and deference the pointer from reflect.New
+		newPtr.Elem().Set(reflect.ValueOf(value))
+		resolveLocation.Elem().Index(index).Set(newPtr)
+	} else {
+		//*[]int
+		resolveLocation.Elem().Index(index).Set(reflect.ValueOf(realValue))
+	}
 
 	return nil
 }
@@ -436,7 +463,8 @@ func (resolver *collectionResolver) setPrimitiveValueToPtrSlice(index int, value
 func (resolver *collectionResolver) setPrimitiveValueToSlice(index int, value interface{}) error {
 	realSlice := resolver.getResolveLocation() //1. bare slice; 2. *[]int, * comes from the reflect.New for some struct
 	if value != nil {
-		realSlice.Index(index).Set(reflect.ValueOf(value))
+		realValue := resolver.convertNumberBaseOnKind(realSlice.Type().Elem().Kind(), value)
+		realSlice.Index(index).Set(reflect.ValueOf(realValue))
 	} else {
 		nilValue := reflect.Zero(realSlice.Type().Elem())
 		realSlice.Index(index).Set(nilValue)
@@ -512,21 +540,22 @@ func (resolver *collectionResolver) resolveArrayElementPrimitive(index int, node
 }
 
 func (resolver *collectionResolver) initObject() error {
-	if resolver.getResolveLocation().Kind() == reflect.Struct {
-		return nil // already struct, seems nothing to do
-	} else if resolver.getResolveLocation().Kind() == reflect.Map {
-		if resolver.getResolveLocation().IsNil() {
+	resolveLocation := resolver.getResolveLocation()
+	if resolveLocation.Kind() == reflect.Struct {
+		return nil // already struct,  nothing to do
+	} else if resolveLocation.Kind() == reflect.Map {
+		if resolveLocation.IsNil() {
 			m := reflect.MakeMap(resolver.getResolveLocation().Type())
-			resolver.getResolveLocation().Set(reflect.ValueOf(m))
+			resolveLocation.Set(reflect.ValueOf(m))
 		}
-	} else if resolver.getResolveLocation().Kind() == reflect.Pointer {
-		if resolver.getResolveLocation().IsNil() {
-			elementType := resolver.getResolveLocation().Type().Elem() // somestruct
+	} else if resolveLocation.Kind() == reflect.Pointer {
+		if resolveLocation.IsNil() {
+			elementType := resolveLocation.Type().Elem() // somestruct
 			if elementType.Kind() != reflect.Struct {
 				return NewErrorInternalExpectingStructButFindOthers(elementType.String())
 			}
-			newObj := reflect.New(elementType)        // *somestruct
-			resolver.getResolveLocation().Set(newObj) // replace the new with above created pointer
+			newObj := reflect.New(elementType) // *somestruct
+			resolveLocation.Set(newObj)        // replace the new with above created pointer
 		}
 	} else {
 		NewErrorInternalExpectingStructButFindOthers(resolver.getResolveLocation().String())
@@ -575,23 +604,52 @@ func (resolver *collectionResolver) processObject() error {
 
 func (resolver *collectionResolver) initArrayLikeResolver(cap int) error {
 	resolverOutElement := resolver.getResolveLocation()
+	hasInitArrayLikeObj := false
+	// pointer to array.slice *[]int
+	// special handling, there's no saying of Nil of Array, but have Nil For Slice,
+	// when a pointer to slice is nil, the pointer it self is nil, the slice itself is also nil.
 	if resolverOutElement.Kind() == reflect.Pointer {
+		// this is possible when struct field is pointer to slice/array, when creating the resolver we do not init them
+		if resolverOutElement.IsNil() {
+			hasInitArrayLikeObj = true
+			elementType := resolverOutElement.Type().Elem().Elem()
+			if resolverOutElement.Type().Elem().Kind() == reflect.Slice {
+				sliceType := reflect.SliceOf(elementType)
+				sliceValue := reflect.MakeSlice(sliceType, cap, cap)
+				ptrToSlice := reflect.New(sliceType)
+				ptrToSlice.Elem().Set(sliceValue)
+				resolverOutElement.Set(ptrToSlice) // set the pointer from nil to something, cannot defernence
+			} else if resolverOutElement.Type().Elem().Kind() == reflect.Array {
+				arrayType := reflect.ArrayOf(cap, elementType)
+				arrayValue := reflect.New(arrayType) // already pointer to array
+				resolverOutElement.Set(arrayValue)   // set the pointer from nil to something, cannot defernence
+
+			} else {
+				return ErrorInternalExpectingArrayLikeObject
+			}
+		}
 		resolverOutElement = resolverOutElement.Elem()
 	}
+	// prevent re-init of array, because it is value type
+	if hasInitArrayLikeObj {
+		return nil
+	}
+	elementType := resolverOutElement.Type().Elem()
 	if resolverOutElement.Kind() == reflect.Slice {
+		// slice is nil, create, this is mostly in when resolver is root node
 		if resolverOutElement.IsNil() {
-			sliceType := reflect.SliceOf(resolverOutElement.Type().Elem())
+			sliceType := reflect.SliceOf(elementType)
 			sliceValue := reflect.MakeSlice(sliceType, cap, cap)
 			resolverOutElement.Set(sliceValue)
 		}
-	} else if resolver.getResolveLocation().Kind() == reflect.Array {
-		arrElementType := resolver.getResolveLocation().Type().Elem()
-		arrayType := reflect.ArrayOf(cap, arrElementType)
-		arrayValue := reflect.New(arrayType).Elem()
-		resolver.getResolveLocation().Set(arrayValue)
+	} else if resolverOutElement.Kind() == reflect.Array {
+		arrayType := reflect.ArrayOf(cap, elementType)
+		arrayValue := reflect.New(arrayType).Elem() // deference the Pointer created by reflect.New, this is ok because we eventually will directly put things into the array slot instead of creating array and assign
+		resolverOutElement.Set(arrayValue)
 	} else {
 		return ErrorInternalExpectingArrayLikeObject
 	}
+
 	return nil
 }
 

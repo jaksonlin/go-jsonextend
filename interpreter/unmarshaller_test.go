@@ -3,6 +3,7 @@ package interpreter_test
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -415,6 +416,69 @@ func TestAssignThingsPrimitiveSlice(t *testing.T) {
 	}
 }
 
+func TestAssignThingsPrimitiveSliceInNonePointerRoot(t *testing.T) {
+
+	type someRoot struct {
+		SomeField []int
+	}
+
+	test1 := someRoot{[]int{1, 2, 3, 4, 5}}
+
+	data, _ := json.Marshal(test1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var someTest1 someRoot
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	for i, v := range someTest1.SomeField {
+		if v != test1.SomeField[i] {
+			t.FailNow()
+		}
+	}
+}
+
+func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
+
+	type someRoot struct {
+		SomeField *[]int
+	}
+
+	test1 := someRoot{&[]int{1, 2, 3, 4, 5}}
+
+	data, _ := json.Marshal(test1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var someTest1 someRoot
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	for i, v := range *someTest1.SomeField {
+		if v != (*test1.SomeField)[i] {
+			t.FailNow()
+		}
+	}
+}
 func TestAssignThingsSliceWithInterfaceElement(t *testing.T) {
 
 	t1 := []interface{}{1, true, false, nil}
@@ -445,6 +509,7 @@ func TestAssignThingsSliceWithInterfaceElement(t *testing.T) {
 func TestAssignThingsPrimitiveArray(t *testing.T) {
 
 	t1 := [5]int{1, 2, 3, 4, 5}
+	fmt.Println(reflect.TypeOf(t1).Kind())
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
 
@@ -456,7 +521,7 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 	}
 	node := sm.GetASTConstructor().GetAST()
 
-	var someTest1 []int
+	var someTest1 [5]int
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
