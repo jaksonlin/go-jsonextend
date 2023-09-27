@@ -159,8 +159,8 @@ func TestInspaceOfGoStruct3(t *testing.T) {
 	}
 	fmt.Println(string(b))
 	var cv SomeStruct
-	err = json.Unmarshal(b, &cv)
-	if err != nil {
+	err = json.Unmarshal(b, &cv) // go cannot unmarshal this format
+	if err == nil {
 		t.FailNow()
 	}
 

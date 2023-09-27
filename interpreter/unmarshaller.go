@@ -631,7 +631,7 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out inte
 			// process elements
 			err = resolver.process()
 			if err != nil {
-				if err != util.ErrorEodOfStack {
+				if err != util.ErrorEndOfStack {
 					return err
 				} else {
 					break

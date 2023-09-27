@@ -33,7 +33,7 @@ func (s *syntaxChecker) Length() int {
 func (s *syntaxChecker) Enclose(b byte) error {
 
 	t, err := s.syntaxState.Pop()
-	if err == util.ErrorEodOfStack {
+	if err == util.ErrorEndOfStack {
 		return ErrorSyntaxEmptyStack
 	}
 	if t > AST_NODE_TYPE_BOUNDARY {
@@ -56,7 +56,7 @@ func (s *syntaxChecker) jsonArrayFormatCheck() error {
 	lastIsValue := false
 	for {
 		t, err := s.syntaxState.Pop()
-		if err == util.ErrorEodOfStack {
+		if err == util.ErrorEndOfStack {
 			return ErrorSyntaxEmptyStack
 		}
 		if t == '[' {
@@ -93,7 +93,7 @@ func (s *syntaxChecker) jsonObjectCheck() error {
 	expectingSymbol := byte(':') // first symbol to expect is : then , then : then , ...
 	for {
 		t, err := s.syntaxState.Pop()
-		if err == util.ErrorEodOfStack {
+		if err == util.ErrorEndOfStack {
 			return ErrorSyntaxEmptyStack
 		}
 		// check first otherwise drop into compare with allowed symbol

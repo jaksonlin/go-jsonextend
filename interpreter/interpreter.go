@@ -240,7 +240,7 @@ func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, err
 		}
 		err = visitor.Visit(node)
 		if err != nil {
-			if err != util.ErrorEodOfStack {
+			if err != util.ErrorEndOfStack {
 				return "", err
 			} else {
 				break
