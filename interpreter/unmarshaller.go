@@ -3,7 +3,6 @@ package interpreter
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
@@ -18,7 +17,7 @@ type collectionResolver struct {
 	arrayIndex           int
 	objectKey            string
 	awaitingResolveCount int
-	hasInit              bool
+	awaitingResolve      bool
 	isPointerValue       bool // when parent is not nil, the `out` is always pointer to something, to distinguish whether it is really a pointer.
 	parent               *collectionResolver
 }
@@ -30,7 +29,7 @@ func newCollectionResolver(node ast.JsonNode, out reflect.Value, variables map[s
 		variables:            variables,
 		resolverStack:        resolverStack,
 		awaitingResolveCount: 0,
-		hasInit:              false,
+		awaitingResolve:      false,
 		parent:               nil,
 		arrayIndex:           -1,
 	}
@@ -97,6 +96,7 @@ func (c *collectionResolver) createChildResolverWithObjectKey(key string, node a
 	newResolver.objectKey = key
 	newResolver.parent = c
 	c.awaitingResolveCount += 1
+	c.awaitingResolve = true
 	return newResolver, nil
 }
 
@@ -122,11 +122,8 @@ func (c *collectionResolver) createChildResolverWithArrayIndex(index int, node a
 	newResolver.arrayIndex = index
 	newResolver.parent = c
 	c.awaitingResolveCount += 1
+	c.awaitingResolve = true
 	return newResolver, nil
-}
-
-func (c *collectionResolver) SetInit() {
-	c.hasInit = true
 }
 
 func (c *collectionResolver) EncloseArray() error {
@@ -274,10 +271,21 @@ func (resolver *collectionResolver) setKVPrimitiveValuePointer(key string, value
 		}
 		field := resolver.out.Elem().FieldByName(key)
 		if field.IsValid() && field.CanSet() {
+			if field.Kind() == reflect.Pointer {
+				if field.IsNil() {
+					ptrValue := reflect.New(field.Type().Elem())
+					field.Set(ptrValue)
+				}
+				field = field.Elem()
+			}
 			if field.Kind() == reflect.Int {
 				field.SetInt(int64(value.(float64)))
 			} else {
-				field.Set(reflect.ValueOf(value))
+				if value == nil {
+					field.Set(reflect.Zero(field.Type()))
+				} else {
+					field.Set(reflect.ValueOf(value))
+				}
 			}
 		} else {
 			return NewErrFieldCannotSetOrNotfound(key)
@@ -372,7 +380,11 @@ func (resolver *collectionResolver) setPrimitiveToArray(index int, value interfa
 }
 
 func (resolver *collectionResolver) setPrimitiveValueToPtrArray(index int, value interface{}) error {
-	resolver.out.Elem().Index(index).Set(reflect.ValueOf(value))
+	if resolver.out.Elem().Type().Elem().Kind() == reflect.Int {
+		resolver.out.Elem().Index(index).SetInt(int64(value.(float64)))
+	} else {
+		resolver.out.Elem().Index(index).Set(reflect.ValueOf(value))
+	}
 	return nil
 }
 
@@ -462,7 +474,6 @@ func (resolver *collectionResolver) initObject() error {
 		NewErrorInternalExpectingStructButFindOthers(resolver.out.String())
 	}
 
-	resolver.SetInit()
 	return nil
 }
 
@@ -501,33 +512,28 @@ func (resolver *collectionResolver) processObject() error {
 			}
 		}
 	}
-	return nil
+	return resolver.Enclose()
 }
 
 func (resolver *collectionResolver) initArrayLikeResolver(cap int) error {
-	if resolver.out.Kind() == reflect.Slice {
-		if resolver.out.IsNil() {
-			sliceType := resolver.out.Type().Elem()
+	resolverOutElement := resolver.out
+	if resolverOutElement.Kind() == reflect.Pointer {
+		resolverOutElement = resolverOutElement.Elem()
+	}
+	if resolverOutElement.Kind() == reflect.Slice {
+		if resolverOutElement.IsNil() {
+			sliceType := reflect.SliceOf(resolverOutElement.Type().Elem())
 			sliceValue := reflect.MakeSlice(sliceType, cap, cap)
-			resolver.out.Set(sliceValue)
+			resolverOutElement.Set(sliceValue)
 		}
 	} else if resolver.out.Kind() == reflect.Array {
 		arrElementType := resolver.out.Type().Elem()
 		arrayType := reflect.ArrayOf(cap, arrElementType)
 		arrayValue := reflect.New(arrayType).Elem()
 		resolver.out.Set(arrayValue)
-	} else if resolver.out.Kind() == reflect.Pointer {
-		if resolver.out.Elem().Kind() != reflect.Array {
-			return ErrorInternalPtrToArrayFindNotArray
-		}
-		arrElementType := resolver.out.Elem().Type().Elem() // get the underlying type in *ptrArray([]int). get the int
-		arrayType := reflect.ArrayOf(cap, arrElementType)   // []int
-		arrValue := reflect.New(arrayType)                  // ptr to some type, just use it as resolver.out is Pointer
-		resolver.out.Set(arrValue)
 	} else {
 		return ErrorInternalExpectingArrayLikeObject
 	}
-	resolver.SetInit()
 	return nil
 }
 
@@ -590,30 +596,15 @@ func isValidObject(outValue reflect.Value) error {
 
 func isValidArray(outValue reflect.Value) error {
 
-	typeItem := reflect.TypeOf(outValue)
-
-	valueItem := reflect.ValueOf(outValue)
-
-	if typeItem.Kind() == reflect.Slice {
-		if valueItem.IsNil() {
-			return ErrSliceNotInit
+	checkerValue := outValue
+	if checkerValue.Kind() == reflect.Pointer {
+		if checkerValue.IsNil() {
+			return ErrSliceOrArrayNotInit
 		}
-		return nil
+		checkerValue = checkerValue.Elem()
 	}
 
-	if typeItem.Kind() == reflect.Pointer {
-		typeItem = typeItem.Elem()
-		if typeItem.Kind() != reflect.Array {
-			return ErrorInternalExpectingArrayLikeObject
-		}
-		if valueItem.IsNil() {
-			return ErrArrayNotInit
-		}
-		return nil
-	}
-
-	// struct and map is ok, map needs to have string field
-	if typeItem.Kind() != reflect.Array {
+	if checkerValue.Kind() != reflect.Slice && checkerValue.Kind() != reflect.Array {
 		return ErrorInternalExpectingArrayLikeObject
 	}
 
@@ -635,17 +626,30 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out inte
 		if err != nil {
 			break
 		}
-		err = resolver.process()
-		if err != nil {
-			if err != util.ErrorEodOfStack {
-				return err
-			} else {
-				break
+		// no dependency waiting
+		if !resolver.awaitingResolve {
+			// process elements
+			err = resolver.process()
+			if err != nil {
+				if err != util.ErrorEodOfStack {
+					return err
+				} else {
+					break
+				}
 			}
-		}
-		if resolver.awaitingResolveCount == 0 {
-			s, _ := traverseStack.Pop() // no awaiting resolve items pop
-			fmt.Printf("resolved: %#v \n", s)
+			// if there's no awaiting dependency, pop
+			if !resolver.awaitingResolve {
+				traverseStack.Pop() // no awaiting resolve items pop
+			}
+		} else {
+			// when the dependecies are resolved, enclose and pop
+			if resolver.awaitingResolveCount != 0 {
+				return ErrorInternalNoneResolvable
+			}
+			if err := resolver.Enclose(); err != nil {
+				return err
+			}
+			traverseStack.Pop()
 		}
 
 	}

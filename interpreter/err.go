@@ -30,9 +30,9 @@ var (
 	ErrorInternalExpectingPrimitive            = errors.New("expecting primitive values but find others")
 	ErrorInternalPtrToArrayFindNotArray        = errors.New("expecting pointer to array, but underlying object not array")
 	ErrorInternalExpectingArrayLikeObject      = errors.New("expecting array like object but find others")
-	ErrSliceNotInit                            = errors.New("slice not init")
-	ErrArrayNotInit                            = errors.New("array not init")
+	ErrSliceOrArrayNotInit                     = errors.New("slice/array not init")
 	ErrorUnmarshalStackNoKV                    = errors.New("there should not be kv pair in stack")
+	ErrorInternalNoneResolvable                = errors.New("expecting dependendent element to resolve")
 )
 
 var (
