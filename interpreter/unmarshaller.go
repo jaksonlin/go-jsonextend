@@ -379,13 +379,21 @@ func (resolver *collectionResolver) resolveKVPrimitiveValue(key string, node ast
 func (resolver *collectionResolver) setPrimitiveToArray(index int, value interface{}) error {
 	resolveLocation := resolver.getResolveLocation()
 	// []*int
-	if resolveLocation.Elem().Kind() == reflect.Pointer {
-		newPtr := reflect.New(resolveLocation.Type().Elem()).Elem()
-		newPtr.Elem().Set(reflect.ValueOf(value))
+	arrayElementType := resolveLocation.Type().Elem()
+	if arrayElementType.Kind() == reflect.Pointer {
+		newPtr := reflect.New(arrayElementType).Elem()
+		if value != nil {
+			newPtr.Elem().Set(reflect.ValueOf(value))
+		}
 		resolveLocation.Index(index).Set(newPtr)
 	} else {
 		//[]int
-		resolveLocation.Index(index).Set(reflect.ValueOf(value))
+		if value != nil {
+			resolveLocation.Index(index).Set(reflect.ValueOf(value))
+		} else {
+			nilValue := reflect.Zero(arrayElementType)
+			resolveLocation.Index(index).Set(nilValue)
+		}
 	}
 
 	return nil
@@ -396,15 +404,23 @@ func (resolver *collectionResolver) setPrimitiveValueToPtrArray(index int, value
 	//.Type().Elem() get the array
 	// and further Elem get the array element type this prevent deference on reflect.Value which may be nil
 	arrayElementType := resolveLocation.Type().Elem().Elem()
+
 	realValue := resolver.convertNumberBaseOnKind(arrayElementType.Kind(), value)
 	//*[]*int
 	if arrayElementType.Kind() == reflect.Pointer {
 		newPtr := reflect.New(arrayElementType).Elem() // new the pointer and deference the pointer from reflect.New
-		newPtr.Elem().Set(reflect.ValueOf(value))
+		if value != nil {
+			newPtr.Elem().Set(reflect.ValueOf(value))
+		}
 		resolveLocation.Elem().Index(index).Set(newPtr)
 	} else {
 		//*[]int
-		resolveLocation.Elem().Index(index).Set(reflect.ValueOf(realValue))
+		if value == nil {
+			nilValue := reflect.Zero(arrayElementType)
+			resolveLocation.Elem().Index(index).Set(nilValue)
+		} else {
+			resolveLocation.Elem().Index(index).Set(reflect.ValueOf(realValue))
+		}
 	}
 
 	return nil

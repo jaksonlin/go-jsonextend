@@ -548,7 +548,7 @@ func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 	}
 	node := sm.GetASTConstructor().GetAST()
 
-	var someTest1 []interface{}
+	var someTest1 [4]interface{}
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
@@ -556,6 +556,70 @@ func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 	}
 	for i, v := range someTest1 {
 		if v != t1[i] {
+			t.FailNow()
+		}
+	}
+}
+
+func TestAssignThingsPrimitiveArrayInNonePointerRoot(t *testing.T) {
+
+	type someRoot struct {
+		SomeField [5]int
+	}
+
+	test1 := someRoot{[5]int{1, 2, 3, 4, 5}}
+
+	data, _ := json.Marshal(test1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var someTest1 someRoot
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	for i, v := range someTest1.SomeField {
+		if v != test1.SomeField[i] {
+			t.FailNow()
+		}
+	}
+}
+
+func TestAssignThingsPrimitiveArrayInPointerRoot(t *testing.T) {
+
+	type someRoot struct {
+		SomeField *[5]int
+	}
+
+	test1 := someRoot{&[5]int{1, 2, 3, 4, 5}}
+
+	data, _ := json.Marshal(test1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var someTest1 someRoot
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	for i, v := range *someTest1.SomeField {
+		if v != (*test1.SomeField)[i] {
 			t.FailNow()
 		}
 	}
