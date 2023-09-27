@@ -20,6 +20,7 @@ type collectionResolver struct {
 	awaitingResolve      bool
 	isPointerValue       bool // when parent is not nil, the `out` is always pointer to something, to distinguish whether it is really a pointer.
 	parent               *collectionResolver
+	ensureInt            bool
 }
 
 func (c *collectionResolver) getResolveLocation() reflect.Value {
@@ -40,6 +41,7 @@ func newCollectionResolver(node ast.JsonNode, out reflect.Value, variables map[s
 		awaitingResolve:      false,
 		parent:               nil,
 		arrayIndex:           -1,
+		ensureInt:            true,
 	}
 	return base
 }
@@ -276,7 +278,7 @@ func (resolver *collectionResolver) setKVPrimitiveValuePointer(key string, value
 		if value == nil {
 			field.Set(reflect.Zero(field.Type()))
 		} else {
-			realValue := convertNumberBaseOnKind(field.Kind(), value)
+			realValue := resolver.convertNumberBaseOnKind(field.Kind(), value)
 			field.Set(reflect.ValueOf(realValue))
 		}
 
@@ -374,13 +376,13 @@ func (resolver *collectionResolver) setPrimitiveToArray(index int, value interfa
 func (resolver *collectionResolver) setPrimitiveValueToPtrArray(index int, value interface{}) error {
 	resolveLocation := resolver.getResolveLocation()
 	//.Type().Elem() get the array and further Elem get the array element type this prevent deference on reflect.Value which may be nil
-	realValue := convertNumberBaseOnKind(resolveLocation.Type().Elem().Elem().Kind(), value)
+	realValue := resolver.convertNumberBaseOnKind(resolveLocation.Type().Elem().Elem().Kind(), value)
 
 	resolver.getResolveLocation().Elem().Index(index).Set(reflect.ValueOf(realValue))
 
 	return nil
 }
-func convertNumberBaseOnKind(k reflect.Kind, value interface{}) interface{} {
+func (resolver *collectionResolver) convertNumberBaseOnKind(k reflect.Kind, value interface{}) interface{} {
 	switch k {
 	case reflect.Int:
 		return int(value.(float64))
@@ -406,6 +408,13 @@ func convertNumberBaseOnKind(k reflect.Kind, value interface{}) interface{} {
 		return uint32(value.(float64))
 	case reflect.Uint64:
 		return uint64(value.(float64))
+	case reflect.Interface:
+		floatVal, ok := value.(float64)
+		if ok {
+			return int(floatVal)
+		} else {
+			return value
+		}
 	default:
 		return value
 	}
@@ -415,7 +424,7 @@ func (resolver *collectionResolver) setPrimitiveValueToPtrSlice(index int, value
 	realSlice := resolveLocation.Elem()              // dereference, get the real slice convert *[]int to []int
 	if value != nil {
 		elemKind := realSlice.Type().Elem().Kind()
-		realValue := convertNumberBaseOnKind(elemKind, value)
+		realValue := resolver.convertNumberBaseOnKind(elemKind, value)
 		realSlice.Index(index).Set(reflect.ValueOf(realValue))
 	} else {
 		nilValue := reflect.Zero(realSlice.Type().Elem())

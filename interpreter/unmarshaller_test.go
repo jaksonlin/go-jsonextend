@@ -417,7 +417,7 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 
 func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 
-	t1 := []interface{}{1.0, true, false, nil}
+	t1 := []interface{}{1, true, false, nil}
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
 
