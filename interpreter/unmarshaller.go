@@ -22,6 +22,14 @@ type collectionResolver struct {
 	parent               *collectionResolver
 }
 
+func (c *collectionResolver) getResolveLocation() reflect.Value {
+	// when we use reflect.New to create the field, it creates a pointer to the field's type
+	if c.isPointerValue {
+		return c.out.Elem()
+	}
+	return c.out
+}
+
 func newCollectionResolver(node ast.JsonNode, out reflect.Value, variables map[string]interface{}, resolverStack *util.Stack[*collectionResolver]) *collectionResolver {
 	base := &collectionResolver{
 		astNode:              node,
@@ -242,7 +250,7 @@ func (resolver *collectionResolver) resolveStringVariable(stringVariable *ast.Js
 }
 
 func (resolver *collectionResolver) setKVPrimitiveValueBaseStruct(key string, value interface{}) error {
-	field := resolver.out.FieldByName(key)
+	field := resolver.getResolveLocation().FieldByName(key)
 	if !field.IsValid() || !field.CanSet() {
 		return NewErrFieldCannotSetOrNotfound(key)
 	}
@@ -251,65 +259,50 @@ func (resolver *collectionResolver) setKVPrimitiveValueBaseStruct(key string, va
 }
 
 func (resolver *collectionResolver) setKVPrimitiveValuePointer(key string, value interface{}) error {
-	if resolver.out.IsNil() { // *somestruct = nil
-		elementType := resolver.out.Type().Elem() // somestruct
-		if elementType.Kind() != reflect.Struct {
-			return NewErrorInternalExpectingStructButFindOthers(elementType.String())
-		}
-		newObj := reflect.New(elementType) // *somestruct
-		field := newObj.Elem().FieldByName(key)
-		if field.IsValid() && field.CanSet() {
-			field.Set(reflect.ValueOf(value))
-		} else {
-			return NewErrFieldCannotSetOrNotfound(key)
-		}
-		resolver.out.Set(newObj) // replace the new with above created pointer
-
-	} else {
-		if resolver.out.Elem().Kind() != reflect.Struct {
-			return NewErrorInternalExpectingStructButFindOthers(resolver.out.Elem().String())
-		}
-		field := resolver.out.Elem().FieldByName(key)
-		if field.IsValid() && field.CanSet() {
-			if field.Kind() == reflect.Pointer {
-				if field.IsNil() {
-					ptrValue := reflect.New(field.Type().Elem())
-					field.Set(ptrValue)
-				}
-				field = field.Elem()
-			}
-			if field.Kind() == reflect.Int {
-				field.SetInt(int64(value.(float64)))
-			} else {
-				if value == nil {
-					field.Set(reflect.Zero(field.Type()))
-				} else {
-					field.Set(reflect.ValueOf(value))
-				}
-			}
-		} else {
-			return NewErrFieldCannotSetOrNotfound(key)
-		}
-
+	resolveLocation := resolver.getResolveLocation()
+	if resolveLocation.Elem().Kind() != reflect.Struct {
+		return NewErrorInternalExpectingStructButFindOthers(resolveLocation.Elem().String())
 	}
+	field := resolveLocation.Elem().FieldByName(key)
+	if field.IsValid() && field.CanSet() {
+		if field.Kind() == reflect.Pointer {
+			if field.IsNil() {
+				ptrValue := reflect.New(field.Type().Elem())
+				field.Set(ptrValue)
+			}
+			field = field.Elem()
+		}
+		if field.Kind() == reflect.Int {
+			field.SetInt(int64(value.(float64)))
+		} else {
+			if value == nil {
+				field.Set(reflect.Zero(field.Type()))
+			} else {
+				field.Set(reflect.ValueOf(value))
+			}
+		}
+	} else {
+		return NewErrFieldCannotSetOrNotfound(key)
+	}
+
 	return nil
 }
 
 func (resolver *collectionResolver) setKVPrimitiveValueMap(key string, value interface{}) error {
-	resolver.out.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
+	resolver.getResolveLocation().SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 	return nil
 }
 
 func (resolver *collectionResolver) setKVPrimitiveValue(key string, value interface{}) error {
 	// for object: struct, *struct, map[string]interface{}, we set the primitive values here
-	if resolver.out.Kind() == reflect.Struct { // root is struct
+	if resolver.getResolveLocation().Kind() == reflect.Struct { // root is struct
 		return resolver.setKVPrimitiveValueBaseStruct(key, value)
-	} else if resolver.out.Kind() == reflect.Pointer { // for pointer it must not be Map, map is ref type in go, it can only be pointer to struct
+	} else if resolver.getResolveLocation().Kind() == reflect.Pointer { // for pointer it must not be Map, map is ref type in go, it can only be pointer to struct
 		return resolver.setKVPrimitiveValuePointer(key, value)
-	} else if resolver.out.Kind() == reflect.Map {
+	} else if resolver.getResolveLocation().Kind() == reflect.Map {
 		return resolver.setKVPrimitiveValueMap(key, value)
 	} else {
-		return NewErrorInternalExpectingStructButFindOthers(resolver.out.String())
+		return NewErrorInternalExpectingStructButFindOthers(resolver.getResolveLocation().String())
 	}
 }
 func (resolver *collectionResolver) getKeyValueKeyFromKvPair(node *ast.JsonKeyValuePairNode) (string, error) {
@@ -375,31 +368,38 @@ func (resolver *collectionResolver) resolveKVPrimitiveValue(key string, node ast
 }
 
 func (resolver *collectionResolver) setPrimitiveToArray(index int, value interface{}) error {
-	resolver.out.Index(index).Set(reflect.ValueOf(value))
+	resolver.getResolveLocation().Index(index).Set(reflect.ValueOf(value))
 	return nil
 }
 
 func (resolver *collectionResolver) setPrimitiveValueToPtrArray(index int, value interface{}) error {
-	if resolver.out.Elem().Type().Elem().Kind() == reflect.Int {
-		resolver.out.Elem().Index(index).SetInt(int64(value.(float64)))
+	if resolver.getResolveLocation().Elem().Type().Elem().Kind() == reflect.Int {
+		resolver.getResolveLocation().Elem().Index(index).SetInt(int64(value.(float64)))
 	} else {
-		resolver.out.Elem().Index(index).Set(reflect.ValueOf(value))
+		resolver.getResolveLocation().Elem().Index(index).Set(reflect.ValueOf(value))
 	}
 	return nil
 }
 
 func (resolver *collectionResolver) setPrimitiveValueToSlice(value interface{}) error {
-	resolver.out = reflect.AppendSlice(resolver.out, reflect.ValueOf(value))
+	if resolver.isPointerValue { //*[]int
+		resolveLocation := resolver.out.Elem()                                   //dereference, get the real slice
+		newSlice := reflect.AppendSlice(resolveLocation, reflect.ValueOf(value)) // append will create a new slice
+		resolver.out.Elem().Set(newSlice)                                        // set the *[]int's element to new slice
+	} else {
+		resolver.out = reflect.Append(resolver.out, reflect.ValueOf(value))
+	}
+
 	return nil
 }
 
 func (resolver *collectionResolver) setArrayPrimitiveValue(index int, value interface{}) error {
 	// for array: array, *array, slice
-	if resolver.out.Kind() == reflect.Array { // root is struct
+	if resolver.getResolveLocation().Kind() == reflect.Array { // root is struct
 		return resolver.setPrimitiveToArray(index, value)
-	} else if resolver.out.Kind() == reflect.Pointer { // for pointer it must not be Map, map is ref type in go, it can only be pointer to struct
+	} else if resolver.getResolveLocation().Kind() == reflect.Pointer { // for pointer it must not be Map, map is ref type in go, it can only be pointer to struct
 		return resolver.setPrimitiveValueToPtrArray(index, value)
-	} else if resolver.out.Kind() == reflect.Slice {
+	} else if resolver.getResolveLocation().Kind() == reflect.Slice {
 		return resolver.setPrimitiveValueToSlice(value)
 	} else {
 		return ErrorInternalExpectingArrayLikeObject
@@ -454,24 +454,24 @@ func (resolver *collectionResolver) resolveArrayElementPrimitive(index int, node
 }
 
 func (resolver *collectionResolver) initObject() error {
-	if resolver.out.Kind() == reflect.Struct {
+	if resolver.getResolveLocation().Kind() == reflect.Struct {
 		return nil // already struct, seems nothing to do
-	} else if resolver.out.Kind() == reflect.Map {
-		if resolver.out.IsNil() {
-			m := reflect.MakeMap(resolver.out.Type())
-			resolver.out.Set(reflect.ValueOf(m))
+	} else if resolver.getResolveLocation().Kind() == reflect.Map {
+		if resolver.getResolveLocation().IsNil() {
+			m := reflect.MakeMap(resolver.getResolveLocation().Type())
+			resolver.getResolveLocation().Set(reflect.ValueOf(m))
 		}
-	} else if resolver.out.Kind() == reflect.Pointer {
-		if resolver.out.IsNil() {
-			elementType := resolver.out.Type().Elem() // somestruct
+	} else if resolver.getResolveLocation().Kind() == reflect.Pointer {
+		if resolver.getResolveLocation().IsNil() {
+			elementType := resolver.getResolveLocation().Type().Elem() // somestruct
 			if elementType.Kind() != reflect.Struct {
 				return NewErrorInternalExpectingStructButFindOthers(elementType.String())
 			}
-			newObj := reflect.New(elementType) // *somestruct
-			resolver.out.Set(newObj)           // replace the new with above created pointer
+			newObj := reflect.New(elementType)        // *somestruct
+			resolver.getResolveLocation().Set(newObj) // replace the new with above created pointer
 		}
 	} else {
-		NewErrorInternalExpectingStructButFindOthers(resolver.out.String())
+		NewErrorInternalExpectingStructButFindOthers(resolver.getResolveLocation().String())
 	}
 
 	return nil
@@ -484,7 +484,7 @@ func (resolver *collectionResolver) processObject() error {
 	if err != nil {
 		return err
 	}
-	err = isValidObject(resolver.out)
+	err = isValidObject(resolver.getResolveLocation())
 	if err != nil {
 		return err
 	}
@@ -516,7 +516,7 @@ func (resolver *collectionResolver) processObject() error {
 }
 
 func (resolver *collectionResolver) initArrayLikeResolver(cap int) error {
-	resolverOutElement := resolver.out
+	resolverOutElement := resolver.getResolveLocation()
 	if resolverOutElement.Kind() == reflect.Pointer {
 		resolverOutElement = resolverOutElement.Elem()
 	}
@@ -526,11 +526,11 @@ func (resolver *collectionResolver) initArrayLikeResolver(cap int) error {
 			sliceValue := reflect.MakeSlice(sliceType, cap, cap)
 			resolverOutElement.Set(sliceValue)
 		}
-	} else if resolver.out.Kind() == reflect.Array {
-		arrElementType := resolver.out.Type().Elem()
+	} else if resolver.getResolveLocation().Kind() == reflect.Array {
+		arrElementType := resolver.getResolveLocation().Type().Elem()
 		arrayType := reflect.ArrayOf(cap, arrElementType)
 		arrayValue := reflect.New(arrayType).Elem()
-		resolver.out.Set(arrayValue)
+		resolver.getResolveLocation().Set(arrayValue)
 	} else {
 		return ErrorInternalExpectingArrayLikeObject
 	}
@@ -544,7 +544,7 @@ func (resolver *collectionResolver) processArray() error {
 	if err != nil {
 		return err
 	}
-	err = isValidArray(resolver.out)
+	err = isValidArray(resolver.getResolveLocation())
 	if err != nil {
 		return err
 	}
