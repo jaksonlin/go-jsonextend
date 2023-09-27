@@ -272,15 +272,14 @@ func (resolver *collectionResolver) setKVPrimitiveValuePointer(key string, value
 			}
 			field = field.Elem()
 		}
-		if field.Kind() == reflect.Int {
-			field.SetInt(int64(value.(float64)))
+
+		if value == nil {
+			field.Set(reflect.Zero(field.Type()))
 		} else {
-			if value == nil {
-				field.Set(reflect.Zero(field.Type()))
-			} else {
-				field.Set(reflect.ValueOf(value))
-			}
+			realValue := convertNumberBaseOnKind(field.Kind(), value)
+			field.Set(reflect.ValueOf(realValue))
 		}
+
 	} else {
 		return NewErrFieldCannotSetOrNotfound(key)
 	}
@@ -373,34 +372,84 @@ func (resolver *collectionResolver) setPrimitiveToArray(index int, value interfa
 }
 
 func (resolver *collectionResolver) setPrimitiveValueToPtrArray(index int, value interface{}) error {
-	if resolver.getResolveLocation().Elem().Type().Elem().Kind() == reflect.Int {
-		resolver.getResolveLocation().Elem().Index(index).SetInt(int64(value.(float64)))
+	resolveLocation := resolver.getResolveLocation()
+	//.Type().Elem() get the array and further Elem get the array element type this prevent deference on reflect.Value which may be nil
+	realValue := convertNumberBaseOnKind(resolveLocation.Type().Elem().Elem().Kind(), value)
+
+	resolver.getResolveLocation().Elem().Index(index).Set(reflect.ValueOf(realValue))
+
+	return nil
+}
+func convertNumberBaseOnKind(k reflect.Kind, value interface{}) interface{} {
+	switch k {
+	case reflect.Int:
+		return int(value.(float64))
+	case reflect.Int16:
+		return int16(value.(float64))
+	case reflect.Int32:
+		return int32(value.(float64))
+	case reflect.Int64:
+		return int64(value.(float64))
+	case reflect.Int8:
+		return int8(value.(float64))
+	case reflect.Float32:
+		return float32(value.(float64))
+	case reflect.Float64:
+		return value
+	case reflect.Uint:
+		return uint(value.(float64))
+	case reflect.Uint8:
+		return uint8(value.(float64))
+	case reflect.Uint16:
+		return uint16(value.(float64))
+	case reflect.Uint32:
+		return uint32(value.(float64))
+	case reflect.Uint64:
+		return uint64(value.(float64))
+	default:
+		return value
+	}
+}
+func (resolver *collectionResolver) setPrimitiveValueToPtrSlice(index int, value interface{}) error {
+	resolveLocation := resolver.getResolveLocation() // get the correct location to resolve, when the ptrToSlice is in a struct, then we will have **[]someType, where the first * comes form reflect.New, and pointing to the ptrToSlice
+	realSlice := resolveLocation.Elem()              // dereference, get the real slice convert *[]int to []int
+	if value != nil {
+		elemKind := realSlice.Type().Elem().Kind()
+		realValue := convertNumberBaseOnKind(elemKind, value)
+		realSlice.Index(index).Set(reflect.ValueOf(realValue))
 	} else {
-		resolver.getResolveLocation().Elem().Index(index).Set(reflect.ValueOf(value))
+		nilValue := reflect.Zero(realSlice.Type().Elem())
+		realSlice.Index(index).Set(nilValue)
 	}
 	return nil
 }
 
-func (resolver *collectionResolver) setPrimitiveValueToSlice(value interface{}) error {
-	if resolver.isPointerValue { //*[]int
-		resolveLocation := resolver.out.Elem()                                   //dereference, get the real slice
-		newSlice := reflect.AppendSlice(resolveLocation, reflect.ValueOf(value)) // append will create a new slice
-		resolver.out.Elem().Set(newSlice)                                        // set the *[]int's element to new slice
+func (resolver *collectionResolver) setPrimitiveValueToSlice(index int, value interface{}) error {
+	realSlice := resolver.getResolveLocation() //1. bare slice; 2. *[]int, * comes from the reflect.New for some struct
+	if value != nil {
+		realSlice.Index(index).Set(reflect.ValueOf(value))
 	} else {
-		resolver.out = reflect.Append(resolver.out, reflect.ValueOf(value))
+		nilValue := reflect.Zero(realSlice.Type().Elem())
+		realSlice.Index(index).Set(nilValue)
 	}
-
 	return nil
 }
 
 func (resolver *collectionResolver) setArrayPrimitiveValue(index int, value interface{}) error {
 	// for array: array, *array, slice
-	if resolver.getResolveLocation().Kind() == reflect.Array { // root is struct
+	resolveLocation := resolver.getResolveLocation()
+	if resolveLocation.Kind() == reflect.Array { // root is struct
 		return resolver.setPrimitiveToArray(index, value)
-	} else if resolver.getResolveLocation().Kind() == reflect.Pointer { // for pointer it must not be Map, map is ref type in go, it can only be pointer to struct
-		return resolver.setPrimitiveValueToPtrArray(index, value)
-	} else if resolver.getResolveLocation().Kind() == reflect.Slice {
-		return resolver.setPrimitiveValueToSlice(value)
+	} else if resolveLocation.Kind() == reflect.Pointer { // for pointer it must not be Map, map is ref type in go, it can only be pointer to struct
+		if resolveLocation.Elem().Kind() == reflect.Array {
+			return resolver.setPrimitiveValueToPtrArray(index, value)
+		} else if resolveLocation.Elem().Kind() == reflect.Slice {
+			return resolver.setPrimitiveValueToPtrSlice(index, value)
+		} else {
+			return ErrorInternalExpectingArrayLikeObject
+		}
+	} else if resolveLocation.Kind() == reflect.Slice {
+		return resolver.setPrimitiveValueToSlice(index, value)
 	} else {
 		return ErrorInternalExpectingArrayLikeObject
 	}

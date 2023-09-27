@@ -414,3 +414,30 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 		}
 	}
 }
+
+func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
+
+	t1 := []interface{}{1.0, true, false, nil}
+	data, _ := json.Marshal(t1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var someTest1 []interface{}
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	for i, v := range someTest1 {
+		if v != t1[i] {
+			t.FailNow()
+		}
+	}
+}

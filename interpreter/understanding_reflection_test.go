@@ -307,3 +307,16 @@ func TestAssignThings5(t *testing.T) {
 	}
 
 }
+
+func TestAppendNil(t *testing.T) {
+	t1 := &[]interface{}{1, true, "string", 4.5}
+
+	v := reflect.ValueOf(t1).Elem()
+
+	nilValue := reflect.Zero(v.Type().Elem())
+
+	newSlice := reflect.Append(v, nilValue)
+	v.Set(newSlice)
+
+	fmt.Println(t1)
+}
