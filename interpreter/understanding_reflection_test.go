@@ -20,15 +20,15 @@ func (i *ImplementingStruct) Method() string {
 }
 
 type SomeStruct struct {
-	Name1  string                 `json:"name1"`
-	Name2  []int                  `json:"name2"`
-	Name3  map[string]int         `json:"name3"` // coded
+	Name1  string                 `json:"name1"` //checked
+	Name2  []int                  `json:"name2"` //checked
+	Name3  map[string]int         `json:"name3"`
 	Name4  []interface{}          `json:"name4"`
 	Name5  []Bro                  `json:"name5"`
 	Name6  []*Bro                 `json:"name6"`
-	Name7  Bro                    `json:"name7"`  //coded
-	Name8  *Bro                   `json:"name8"`  //coded
-	Name9  map[string]interface{} `json:"name9"`  //coded
+	Name7  Bro                    `json:"name7"` //checked
+	Name8  *Bro                   `json:"name8"` //checked
+	Name9  map[string]interface{} `json:"name9"`
 	Name10 map[int]Bro            `json:"name10"` //go also not support unmarshal, json now allow number as key,
 	Name11 [3]int                 `json:"name11"`
 	Name12 MyInterface            `json:"name12"` // pointer
@@ -319,4 +319,49 @@ func TestAppendNil(t *testing.T) {
 	v.Set(newSlice)
 
 	fmt.Println(t1)
+}
+
+func TestNestedPointerCase(t *testing.T) {
+	var somePtr *********int
+	var resultPtr reflect.Value = reflect.ValueOf(&somePtr)
+	fmt.Println(resultPtr.Kind())
+	resultTye := reflect.TypeOf(somePtr)
+	value := 10
+	resultValue := reflect.ValueOf(value)
+
+	numberOfPointer := 0
+	// get number of pointers
+	for resultTye.Kind() == reflect.Pointer {
+		resultTye = resultTye.Elem()
+		numberOfPointer += 1
+	}
+
+	var tmpPtr reflect.Value
+	for ; numberOfPointer > 0; numberOfPointer-- {
+		tmpPtr = reflect.New(resultValue.Type()) // var tmpPtr *resultValueType
+		tmpPtr.Elem().Set(resultValue)           // *tmpPtr = resultValue
+		resultValue = tmpPtr
+	}
+	resultPtr.Elem().Set(resultValue)
+
+	if *********somePtr != 10 {
+		t.FailNow()
+	}
+
+	content, err := json.Marshal(somePtr)
+	if err != nil {
+		t.FailNow()
+	}
+	if string(content) != "10" {
+		t.FailNow()
+	}
+	var someReceiver *********int
+	err = json.Unmarshal(content, &someReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if *********somePtr != 10 {
+		t.FailNow()
+	}
+
 }

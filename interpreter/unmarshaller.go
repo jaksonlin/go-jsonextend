@@ -131,6 +131,7 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out inte
 		}
 
 	}
-	valueItem.Elem().Set(resolver.ptrToActualValue.Elem())
+	actualValue := resolver.restoreValue().Elem()
+	valueItem.Elem().Set(actualValue)
 	return nil
 }
