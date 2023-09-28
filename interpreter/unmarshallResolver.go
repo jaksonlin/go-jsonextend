@@ -34,7 +34,10 @@ func (resolver *unmarshallResolver) resolveDependency(dependentResolver *unmarsh
 		}
 		field.Set(dependentValue)
 	} else if resolver.outElementKind == reflect.Map {
-		key := reflect.ValueOf(dependentResolver.objectKey)
+		key, err := resolver.createMapKeyValueByMapKeyKind(dependentResolver.objectKey)
+		if err != nil {
+			return err
+		}
 		resolver.ptrToActualValue.Elem().SetMapIndex(key, dependentValue)
 	} else {
 		return ErrorPrimitiveTypeCannotResolveDependency
@@ -202,7 +205,7 @@ func (resolver *unmarshallResolver) VisitNullNode(node *ast.JsonNullNode) error 
 }
 
 func (resolver *unmarshallResolver) VisitNumberNode(node *ast.JsonNumberNode) error {
-	realValue := convertNumberBaseOnKind(resolver.outElementKind, node.Value, resolver.options)
+	realValue := resolver.convertNumberBaseOnKind(node.Value)
 	resolver.setValue(realValue)
 	return resolver.resolve()
 }

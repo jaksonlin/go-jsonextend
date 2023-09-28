@@ -23,19 +23,19 @@ type SomeStruct struct {
 	Name1  string                 `json:"name1"` //checked
 	Name2  []int                  `json:"name2"` //checked
 	Name3  map[string]int         `json:"name3"`
-	Name4  []interface{}          `json:"name4"`
+	Name4  []interface{}          `json:"name4"` // checked
 	Name5  []Bro                  `json:"name5"`
 	Name6  []*Bro                 `json:"name6"`
 	Name7  Bro                    `json:"name7"` //checked
 	Name8  *Bro                   `json:"name8"` //checked
 	Name9  map[string]interface{} `json:"name9"`
 	Name10 map[int]Bro            `json:"name10"` //go also not support unmarshal, json now allow number as key,
-	Name11 [3]int                 `json:"name11"`
+	Name11 [3]int                 `json:"name11"` //checked
 	Name12 MyInterface            `json:"name12"` // pointer
 	Name13 MyInterface            `json:"name13"` // struct
 	// ... and so on for other cases
 	Name14 []map[string][]interface{} `json:"name14"`
-	Name15 interface{}                `json:"name15"`
+	Name15 interface{}                `json:"name15"` // covert to map[string]interface{}
 	Name16 *Bro                       `json:"name16"` //coded, for nil, the kv pair len==0, no additional code
 	Name17 map[string]Bro             `json:"name17"`
 	Name18 []int                      `json:"name18"`
@@ -363,5 +363,27 @@ func TestNestedPointerCase(t *testing.T) {
 	if *********somePtr != 10 {
 		t.FailNow()
 	}
+
+}
+
+func TestMapint(t *testing.T) {
+	type someStruct struct {
+		Name15 map[int]string `json:"name15"`
+	}
+
+	// JSON data as a byte slice
+	jsonData := []byte(`{"name15": {"1": "John", "2": "Doe"}}`)
+
+	// Create an instance of someStruct
+	var data someStruct
+
+	// Unmarshal the JSON data into the struct
+	err := json.Unmarshal(jsonData, &data)
+	if err != nil {
+		t.FailNow()
+	}
+
+	// Print the value in the Name15 field
+	fmt.Println(data.Name15) // Prints: map[1:John 2:Doe]
 
 }

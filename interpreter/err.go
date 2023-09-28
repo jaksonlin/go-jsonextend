@@ -17,14 +17,16 @@ const (
 )
 
 var (
-	ErrorInterpreSymbolFailure         = errors.New("have symbol not consumed")
-	ErrorInterpretVariable             = errors.New("error when interpret variable values")
-	ErrorInternalInterpreterOutdated   = errors.New("interpreter not update as the ast grows")
-	ErrorKeyStringVariableNotResolve   = errors.New("find string variable as object key, but the variable value is missing")
-	ErrorVariableValueNotJsonValueType = errors.New("variable value should be json value type")
-	ErrorVariableValueNotFound         = errors.New("variable value is not found")
-	ErrorInternalGetPrimitiveValue     = errors.New("try to get primitive value from none-primitive type")
-	ErrorInternalShouldBeArrayOrSlice  = errors.New("should be array or slice")
+	ErrorInterpreSymbolFailure           = errors.New("have symbol not consumed")
+	ErrorInterpretVariable               = errors.New("error when interpret variable values")
+	ErrorInternalInterpreterOutdated     = errors.New("interpreter not update as the ast grows")
+	ErrorKeyStringVariableNotResolve     = errors.New("find string variable as object key, but the variable value is missing")
+	ErrorVariableValueNotJsonValueType   = errors.New("variable value should be json value type")
+	ErrorVariableValueNotFound           = errors.New("variable value is not found")
+	ErrorInternalGetPrimitiveValue       = errors.New("try to get primitive value from none-primitive type")
+	ErrorInternalShouldBeArrayOrSlice    = errors.New("should be array or slice")
+	ErrorInternalUnsupportedMapKeyKind   = fmt.Errorf("unsupported map key to continue")
+	ErrorInternalMapKeyTypeNotMatchValue = fmt.Errorf("expect bool as key but value is not bool")
 
 	ErrorStringVariableNotResolveOnKeyLocation = errors.New("object key contain string variable that has no variable value")
 	ErrorInternalExpectingPrimitive            = errors.New("expecting primitive values but find others")
@@ -70,4 +72,8 @@ func NewVariableNotFound(variable string) error {
 }
 func NewErrorInternalFieldTypeNotMatchAST(kind string) error {
 	return fmt.Errorf(FieldTypeNotMatchAST, kind)
+}
+
+func NewErrorInternalMapKeyValueKindNotMatch(kind string, value interface{}) error {
+	return fmt.Errorf("expect %s as key but value is not :%#v", kind, value)
 }

@@ -30,7 +30,7 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 
 	if childElementType.Kind() == reflect.Map {
 
-		childElementType = resolver.ptrToActualValue.Type().Elem()
+		childElementType = resolver.ptrToActualValue.Type().Elem().Elem()
 
 	} else if childElementType.Kind() == reflect.Struct {
 

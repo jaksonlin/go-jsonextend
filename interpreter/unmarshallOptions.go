@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
 	"github.com/jaksonlin/go-jsonextend/util"
@@ -63,8 +64,9 @@ func resolveStringVariable(stringVariable *ast.JsonExtendedStringWIthVariableNod
 
 }
 
-func convertNumberBaseOnKind(k reflect.Kind, value interface{}, resolver *unmarshallOptions) interface{} {
-	switch k {
+func (resolver *unmarshallResolver) convertNumberBaseOnKind(value interface{}) interface{} {
+
+	switch resolver.outElementKind {
 	case reflect.Int:
 		return int(value.(float64))
 	case reflect.Int16:
@@ -90,13 +92,54 @@ func convertNumberBaseOnKind(k reflect.Kind, value interface{}, resolver *unmars
 	case reflect.Uint64:
 		return uint64(value.(float64))
 	case reflect.Interface:
+		// map[xxx]interface{} keep it as it is
+		if resolver.parent.ptrToActualValue.Elem().Type().Kind() == reflect.Map {
+			return value
+		}
 		floatVal, ok := value.(float64)
 		if ok {
-			return int(floatVal)
+			if resolver.options.ensureInt {
+				return int(floatVal)
+			} else {
+				return floatVal
+			}
 		} else {
 			return value
 		}
 	default:
 		return value
+	}
+}
+
+func (resolver *unmarshallResolver) createMapKeyValueByMapKeyKind(value string) (reflect.Value, error) {
+	mapKeyType := resolver.ptrToActualValue.Elem().Type().Key()
+	mapKeyKind := mapKeyType.Kind()
+	// Helper function to convert a string to a numeric type
+	convertToNumeric := func(value string) (reflect.Value, error) {
+		switch mapKeyKind {
+		case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8:
+			val, err := strconv.ParseInt(value, 10, 64)
+			return reflect.ValueOf(val).Convert(mapKeyType), err
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			val, err := strconv.ParseUint(value, 10, 64)
+			return reflect.ValueOf(val).Convert(mapKeyType), err
+		default:
+			return reflect.Value{}, ErrorInternalUnsupportedMapKeyKind
+		}
+	}
+
+	// Convert string to the appropriate type based on mapKeyKind
+	switch mapKeyKind {
+	case reflect.String:
+		return reflect.ValueOf(value), nil
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Float32, reflect.Float64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+
+		if numericValue, err := convertToNumeric(value); err == nil {
+			return numericValue, nil
+		}
+		return reflect.Value{}, NewErrorInternalMapKeyValueKindNotMatch(mapKeyKind.String(), value)
+
+	default:
+		return reflect.Value{}, ErrorInternalUnsupportedMapKeyKind
 	}
 }

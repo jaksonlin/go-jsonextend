@@ -63,6 +63,152 @@ func TestAssignThingsPrimitives(t *testing.T) {
 	}
 }
 
+func TestAssignThingsPrimitivesMapInterface(t *testing.T) {
+	var t1 map[string]interface{} = map[string]interface{}{
+		"Hello":           "Peter",
+		"World":           101.123,
+		"World2":          100,
+		"Apple":           true,
+		"Banana":          false,
+		"Something":       nil,
+		"SomethingNotNil": "1234",
+	}
+
+	data, _ := json.Marshal(t1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someTest1Check map[string]interface{}
+	err = json.Unmarshal(data, &someTest1Check)
+	if err != nil {
+		t.FailNow()
+	}
+	var someTest1 map[string]interface{}
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someTest1["Hello"] != "Peter" {
+		t.FailNow()
+	}
+	if someTest1["World"] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+		t.FailNow()
+	}
+	if someTest1["World2"] != 100.0 {
+		t.FailNow()
+	}
+	if someTest1["Apple"] != true {
+		t.FailNow()
+	}
+	if someTest1["Banana"] != false {
+		t.FailNow()
+	}
+	if someTest1["Something"] != nil {
+		t.FailNow()
+	}
+	if someTest1["SomethingNotNil"] != "1234" {
+		t.FailNow()
+	}
+}
+
+func TestAssignThingsPrimitivesMapIntInterface(t *testing.T) {
+	var t1 map[int]interface{} = map[int]interface{}{
+		1: "Peter",
+		2: 101.123,
+		3: 100,
+		4: true,
+		5: false,
+		6: nil,
+		7: "1234",
+	}
+
+	data, _ := json.Marshal(t1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someTest1Check map[int]interface{}
+	err = json.Unmarshal(data, &someTest1Check)
+	if err != nil {
+		t.FailNow()
+	}
+	var someTest1 map[int]interface{}
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someTest1[1] != "Peter" {
+		t.FailNow()
+	}
+	if someTest1[2] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+		t.FailNow()
+	}
+	if someTest1[3] != 100.0 {
+		t.FailNow()
+	}
+	if someTest1[4] != true {
+		t.FailNow()
+	}
+	if someTest1[5] != false {
+		t.FailNow()
+	}
+	if someTest1[6] != nil {
+		t.FailNow()
+	}
+	if someTest1[7] != "1234" {
+		t.FailNow()
+	}
+}
+
+func TestAssignThingsPrimitivesMapBoolInterface(t *testing.T) {
+	var t1 map[uint8]interface{} = map[uint8]interface{}{
+		1: "Peter",
+		2: 101.123,
+	}
+
+	data, _ := json.Marshal(t1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someTest1Check map[int]interface{}
+	err = json.Unmarshal(data, &someTest1Check)
+	if err != nil {
+		t.FailNow()
+	}
+	var someTest1 map[uint8]interface{}
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someTest1[1] != "Peter" {
+		t.FailNow()
+	}
+	if someTest1[2] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+		t.FailNow()
+	}
+
+}
+
 func TestAssignThingsPrimitivesInNonePointerRoot(t *testing.T) {
 	type test1 struct {
 		Hello           string
