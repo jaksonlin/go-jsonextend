@@ -86,7 +86,7 @@ type JsonVisitor interface {
 
 type JsonNode interface {
 	GetNodeType() AST_NODETYPE
-	Visit(visitor JsonVisitor)
+	Visit(visitor JsonVisitor) error
 }
 
 type JsonCollectionNode interface {
@@ -109,8 +109,8 @@ func (node *JsonStringNode) GetNodeType() AST_NODETYPE {
 	return AST_STRING
 }
 
-func (node *JsonStringNode) Visit(visitor JsonVisitor) {
-	visitor.VisitStringNode(node)
+func (node *JsonStringNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitStringNode(node)
 }
 
 func (node *JsonStringNode) GetValue() string {
@@ -131,8 +131,8 @@ func (node *JsonNumberNode) GetNodeType() AST_NODETYPE {
 	return AST_NUMBER
 }
 
-func (node *JsonNumberNode) Visit(visitor JsonVisitor) {
-	visitor.VisitNumberNode(node)
+func (node *JsonNumberNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitNumberNode(node)
 }
 
 type JsonBooleanNode struct {
@@ -145,8 +145,8 @@ func (node *JsonBooleanNode) GetNodeType() AST_NODETYPE {
 	return AST_BOOLEAN
 }
 
-func (node *JsonBooleanNode) Visit(visitor JsonVisitor) {
-	visitor.VisitBooleanNode(node)
+func (node *JsonBooleanNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitBooleanNode(node)
 }
 
 type JsonNullNode struct {
@@ -159,8 +159,8 @@ func (node *JsonNullNode) GetNodeType() AST_NODETYPE {
 	return AST_NULL
 }
 
-func (node *JsonNullNode) Visit(visitor JsonVisitor) {
-	visitor.VisitNullNode(node)
+func (node *JsonNullNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitNullNode(node)
 }
 
 type JsonArrayNode struct {
@@ -173,8 +173,8 @@ func (node *JsonArrayNode) GetNodeType() AST_NODETYPE {
 	return AST_ARRAY
 }
 
-func (node *JsonArrayNode) Visit(visitor JsonVisitor) {
-	visitor.VisitArrayNode(node)
+func (node *JsonArrayNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitArrayNode(node)
 }
 
 func (node *JsonArrayNode) Append(n JsonNode) {
@@ -196,8 +196,8 @@ func (node *JsonKeyValuePairNode) GetNodeType() AST_NODETYPE {
 	return AST_KVPAIR
 }
 
-func (node *JsonKeyValuePairNode) Visit(visitor JsonVisitor) {
-	visitor.VisitKeyValuePairNode(node)
+func (node *JsonKeyValuePairNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitKeyValuePairNode(node)
 }
 
 func (node *JsonKeyValuePairNode) IsFilled() bool {
@@ -214,8 +214,8 @@ func (node *JsonObjectNode) GetNodeType() AST_NODETYPE {
 	return AST_OBJECT
 }
 
-func (node *JsonObjectNode) Visit(visitor JsonVisitor) {
-	visitor.VisitObjectNode(node)
+func (node *JsonObjectNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitObjectNode(node)
 }
 
 func (node *JsonObjectNode) Append(kvNode *JsonKeyValuePairNode) {
@@ -231,14 +231,14 @@ type JsonExtendedVariableNode struct {
 	Variable string
 }
 
-var _ JsonNode = &JsonObjectNode{}
+var _ JsonNode = &JsonExtendedVariableNode{}
 
 func (node *JsonExtendedVariableNode) GetNodeType() AST_NODETYPE {
 	return AST_VARIABLE
 }
 
-func (node *JsonExtendedVariableNode) Visit(visitor JsonVisitor) {
-	visitor.VisitVariableNode(node)
+func (node *JsonExtendedVariableNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitVariableNode(node)
 }
 
 func (node *JsonExtendedVariableNode) extractVariable() {
@@ -251,14 +251,14 @@ type JsonExtendedStringWIthVariableNode struct {
 	Variables map[string][]byte
 }
 
-var _ JsonNode = &JsonObjectNode{}
+var _ JsonNode = &JsonExtendedStringWIthVariableNode{}
 
 func (node *JsonExtendedStringWIthVariableNode) GetNodeType() AST_NODETYPE {
 	return AST_STRING_VARIABLE
 }
 
-func (node *JsonExtendedStringWIthVariableNode) Visit(visitor JsonVisitor) {
-	visitor.VisitStringWithVariableNode(node)
+func (node *JsonExtendedStringWIthVariableNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitStringWithVariableNode(node)
 }
 
 func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
@@ -272,5 +272,5 @@ func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
 }
 
 func (node *JsonExtendedStringWIthVariableNode) GetValue() string {
-	return node.GetValue()
+	return node.JsonStringNode.GetValue()
 }

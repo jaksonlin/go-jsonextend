@@ -33,6 +33,8 @@ var (
 	ErrSliceOrArrayNotInit                     = errors.New("slice/array not init")
 	ErrorUnmarshalStackNoKV                    = errors.New("there should not be kv pair in stack")
 	ErrorInternalNoneResolvable                = errors.New("expecting dependendent element to resolve")
+	ErrorPrimitiveTypeCannotResolveDependency  = errors.New("pritimive type cannot resolve dependency")
+	ErrorNotSupportedASTNode                   = errors.New("not supported ast node")
 )
 
 var (

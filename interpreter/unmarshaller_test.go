@@ -679,3 +679,81 @@ func TestAssignThingsPrimitiveSliceArrayCrossOver(t *testing.T) {
 		}
 	}
 }
+
+func TestAssignThingsPrimitiveArrayPointerValues(t *testing.T) {
+	v1 := 1
+	v2 := 2
+	v3 := 3
+	v4 := 4
+	v5 := 5
+	t1 := [5]*int{&v1, &v2, &v3, &v4, &v5}
+
+	fmt.Println(reflect.TypeOf(t1).Kind())
+	data, _ := json.Marshal(t1)
+	fmt.Println(string(data))
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var someTest1 [5]*int
+	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	for i, v := range someTest1 {
+		if *v != *t1[i] {
+			t.FailNow()
+		}
+	}
+}
+
+func TestNestedPointerResolve(t *testing.T) {
+	var somePtr *********int
+	var resultPtr reflect.Value = reflect.ValueOf(&somePtr)
+	fmt.Println(resultPtr.Kind())
+	resultTye := reflect.TypeOf(somePtr)
+	value := 10
+	resultValue := reflect.ValueOf(value)
+
+	numberOfPointer := 0
+	// get number of pointers
+	for resultTye.Kind() == reflect.Pointer {
+		resultTye = resultTye.Elem()
+		numberOfPointer += 1
+	}
+
+	var tmpPtr reflect.Value
+	for ; numberOfPointer > 0; numberOfPointer-- {
+		tmpPtr = reflect.New(resultValue.Type()) // var tmpPtr *resultValueType
+		tmpPtr.Elem().Set(resultValue)           // *tmpPtr = resultValue
+		resultValue = tmpPtr
+	}
+	resultPtr.Elem().Set(resultValue)
+
+	if *********somePtr != 10 {
+		t.FailNow()
+	}
+
+	content, err := json.Marshal(somePtr)
+	if err != nil {
+		t.FailNow()
+	}
+	if string(content) != "10" {
+		t.FailNow()
+	}
+	var someReceiver *********int
+	err = json.Unmarshal(content, &someReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if *********somePtr != 10 {
+		t.FailNow()
+	}
+
+}
