@@ -40,7 +40,7 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver := newunmarshallResolver(valueNode, childElementType, resolver.options)
+	newResolver := newUnmarshallResolver(valueNode, childElementType, resolver.options)
 
 	// 3. create relation
 	newResolver.bindObjectParent(key, resolver)
@@ -61,7 +61,7 @@ func (resolver *unmarshallResolver) createArrayElementResolver(index int, node a
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver := newunmarshallResolver(node, childElementType, resolver.options)
+	newResolver := newUnmarshallResolver(node, childElementType, resolver.options)
 
 	// 3. create relation
 	newResolver.bindArrayLikeParent(index, resolver)
@@ -96,7 +96,7 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out inte
 
 	options := NewUnMarshallOptions(variables)
 	traverseStack := options.resolverStack
-	resolver := newunmarshallResolver(node, valueItem.Type(), options)
+	resolver := newUnmarshallResolver(node, valueItem.Type(), options)
 	traverseStack.Push(resolver)
 
 	for {

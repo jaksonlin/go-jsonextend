@@ -387,3 +387,28 @@ func TestMapint(t *testing.T) {
 	fmt.Println(data.Name15) // Prints: map[1:John 2:Doe]
 
 }
+
+func TestNilInterfaceint(t *testing.T) {
+	type someStruct struct {
+		Name15 *interface{}
+	}
+
+	// JSON data as a byte slice
+	jsonData := someStruct{nil}
+
+	// Unmarshal the JSON data into the struct
+	rs, err := json.Marshal(jsonData)
+	if err != nil {
+		t.FailNow()
+	}
+
+	// Create an instance of someStruct
+	var data someStruct
+	err = json.Unmarshal(rs, &data)
+	if err != nil {
+		t.FailNow()
+	}
+	// Print the value in the Name15 field
+	fmt.Println(data.Name15) // Prints: map[1:John 2:Doe]
+
+}

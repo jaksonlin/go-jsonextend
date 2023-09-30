@@ -93,7 +93,8 @@ func (resolver *unmarshallResolver) convertNumberBaseOnKind(value interface{}) i
 		return uint64(value.(float64))
 	case reflect.Interface:
 		// map[xxx]interface{} keep it as it is
-		if resolver.parent.ptrToActualValue.Elem().Type().Kind() == reflect.Map {
+		parentReceiverKind := resolver.parent.ptrToActualValue.Elem().Type().Kind()
+		if parentReceiverKind == reflect.Map || parentReceiverKind == reflect.Array || parentReceiverKind == reflect.Slice {
 			return value
 		}
 		floatVal, ok := value.(float64)

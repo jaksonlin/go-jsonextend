@@ -6,6 +6,10 @@ import (
 	"github.com/jaksonlin/go-jsonextend/ast"
 )
 
+var dummyMap map[string]interface{}
+var dummySlice []interface{}
+var dummyNilPtr *interface{}
+
 // we hold a pointer to these field rather than keeping the field's reflect.Value directly
 // number of pointer of the original field, not including the one we create to hold the filed
 type unmarshallResolver struct {
@@ -25,20 +29,39 @@ type unmarshallResolver struct {
 
 func (resolver *unmarshallResolver) resolveDependency(dependentResolver *unmarshallResolver) error {
 	dependentValue := dependentResolver.restoreValue()
+
 	if resolver.outElementKind == reflect.Array || resolver.outElementKind == reflect.Slice {
+
 		resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).Set(dependentValue)
+
 	} else if resolver.outElementKind == reflect.Struct {
 		field := resolver.ptrToActualValue.Elem().FieldByName(dependentResolver.objectKey)
 		if !field.IsValid() || !field.CanSet() {
 			return NewErrFieldCannotSetOrNotfound(dependentResolver.objectKey)
 		}
+
 		field.Set(dependentValue)
+
 	} else if resolver.outElementKind == reflect.Map {
 		key, err := resolver.createMapKeyValueByMapKeyKind(dependentResolver.objectKey)
 		if err != nil {
 			return err
 		}
 		resolver.ptrToActualValue.Elem().SetMapIndex(key, dependentValue)
+	} else if resolver.outElementKind == reflect.Interface {
+		if dependentResolver.arrayIndex != -1 { //interface holding slice
+			resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).Set(dependentValue)
+		} else {
+			if len(dependentResolver.objectKey) > 0 { // interface holding map
+				key, err := resolver.createMapKeyValueByMapKeyKind(dependentResolver.objectKey)
+				if err != nil {
+					return err
+				}
+				resolver.ptrToActualValue.Elem().SetMapIndex(key, dependentValue)
+			} else { // in any case, we cannot tell what the real thing is within the interface, set it in
+				resolver.ptrToActualValue.Elem().Set(dependentValue)
+			}
+		}
 	} else {
 		return ErrorPrimitiveTypeCannotResolveDependency
 	}
@@ -59,7 +82,7 @@ func (resolver *unmarshallResolver) setValue(value interface{}) {
 // when the actual field is pointer type, you need a pointer to the actual field to set its Elem to the retrun value from this func
 func (resolver *unmarshallResolver) restoreValue() reflect.Value {
 	if !resolver.isPointerValue {
-		return resolver.ptrToActualValue.Elem() // remove the pointer we add (newunmarshallResolver)
+		return resolver.ptrToActualValue.Elem() // remove the pointer we add (newUnmarshallResolver)
 	} else {
 		// actual value
 		if resolver.numberOfPointer == 1 {
@@ -88,7 +111,7 @@ func (resolver *unmarshallResolver) bindArrayLikeParent(index int, parent *unmar
 	parent.awaitingResolveCount += 1
 	parent.awaitingResolve = true
 }
-func newunmarshallResolver(
+func newUnmarshallResolver(
 	node ast.JsonNode,
 	outType reflect.Type,
 	options *unmarshallOptions) *unmarshallResolver {
@@ -128,6 +151,25 @@ func newunmarshallResolver(
 	case reflect.Struct:
 		ptrToActualValue = reflect.New(someOutType) //*Struct
 		elementKind = reflect.Struct
+	case reflect.Interface:
+		// someField: interface{}
+		elementKind = reflect.Interface
+		if node.GetNodeType() == ast.AST_ARRAY {
+			numberOfElement := node.(*ast.JsonArrayNode).Length()
+			sliceType := reflect.SliceOf(reflect.TypeOf((*interface{})(nil)).Elem())
+			sliceValue := reflect.MakeSlice(sliceType, numberOfElement, numberOfElement) // use index to manipulate the slice
+			ptrToActualValue = reflect.New(sliceValue.Type())
+			ptrToActualValue.Elem().Set(sliceValue)
+			collectionDataType = sliceValue.Type().Elem()
+		} else if node.GetNodeType() == ast.AST_OBJECT {
+			newMap := reflect.MakeMap(reflect.TypeOf(dummyMap))
+			ptrToActualValue = reflect.New(newMap.Type())
+			ptrToActualValue.Elem().Set(newMap)
+			collectionDataType = newMap.Type().Elem()
+		} else {
+			ptrToActualValue = reflect.New(someOutType)
+			//ptrToActualValue.Elem().Set(reflect.Zero(someOutType))
+		}
 	default: // primitives
 		ptrToActualValue = reflect.New(someOutType)
 		ptrToActualValue.Elem().Set(reflect.Zero(someOutType))
