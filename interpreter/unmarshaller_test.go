@@ -609,25 +609,28 @@ func TestAssignThingsPrimitivePointers(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	if *someTest1.Hello != "Peter" {
+	if *someTest1.Hello != *someRs.Hello {
 		t.FailNow()
 	}
-	if *someTest1.World != 100.123 {
+	if *someTest1.World != *someRs.World {
 		t.FailNow()
 	}
-	if *someTest1.World2 != 100 {
+	if *someTest1.World2 != *someRs.World2 {
 		t.FailNow()
 	}
-	if *someTest1.Apple != true {
+	if *someTest1.Apple != *someRs.Apple {
 		t.FailNow()
 	}
-	if *someTest1.Banana != false {
+	if *someTest1.Banana != *someRs.Banana {
 		t.FailNow()
 	}
-	if *someTest1.Something != nil {
+	if someRs.Something != nil {
 		t.FailNow()
 	}
-	if *someTest1.SomethingNotNil != "1234" {
+	if someTest1.Something != nil {
+		t.FailNow()
+	}
+	if *someTest1.SomethingNotNil != *someRs.SomethingNotNil {
 		t.FailNow()
 	}
 }
@@ -680,25 +683,28 @@ func TestAssignThingsPrimitivePointersInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := someTestRoot1.Test1Data
-	if *someTest1.Hello != "Peter" {
+	if *someTest1.Hello != *someRs.Test1Data.Hello {
 		t.FailNow()
 	}
-	if *someTest1.World != 100.123 {
+	if *someTest1.World != *someRs.Test1Data.World {
 		t.FailNow()
 	}
-	if *someTest1.World2 != 100 {
+	if *someTest1.World2 != *someRs.Test1Data.World2 {
 		t.FailNow()
 	}
-	if *someTest1.Apple != true {
+	if *someTest1.Apple != *someRs.Test1Data.Apple {
 		t.FailNow()
 	}
-	if *someTest1.Banana != false {
+	if *someTest1.Banana != *someRs.Test1Data.Banana {
 		t.FailNow()
 	}
-	if *someTest1.Something != nil {
+	if someRs.Test1Data.Something != nil {
 		t.FailNow()
 	}
-	if *someTest1.SomethingNotNil != "1234" {
+	if someTest1.Something != nil {
+		t.FailNow()
+	}
+	if *someTest1.SomethingNotNil != *someRs.Test1Data.SomethingNotNil {
 		t.FailNow()
 	}
 }
@@ -751,25 +757,28 @@ func TestAssignThingsPrimitivePointersInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := someTestRoot1.Test1Data
-	if *someTest1.Hello != "Peter" {
+	if *someTest1.Hello != *someRs.Test1Data.Hello {
 		t.FailNow()
 	}
-	if *someTest1.World != 100.123 {
+	if *someTest1.World != *someRs.Test1Data.World {
 		t.FailNow()
 	}
-	if *someTest1.World2 != 100 {
+	if *someTest1.World2 != *someRs.Test1Data.World2 {
 		t.FailNow()
 	}
-	if *someTest1.Apple != true {
+	if *someTest1.Apple != *someRs.Test1Data.Apple {
 		t.FailNow()
 	}
-	if *someTest1.Banana != false {
+	if *someTest1.Banana != *someRs.Test1Data.Banana {
 		t.FailNow()
 	}
-	if *someTest1.Something != nil {
+	if someRs.Test1Data.Something != nil {
 		t.FailNow()
 	}
-	if *someTest1.SomethingNotNil != "1234" {
+	if someTest1.Something != nil {
+		t.FailNow()
+	}
+	if *someTest1.SomethingNotNil != *someRs.Test1Data.SomethingNotNil {
 		t.FailNow()
 	}
 }
@@ -1320,9 +1329,16 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRootAndPointerValue(t *test
 		t.FailNow()
 	}
 	for i, v := range *someTest1.SomeField {
-		if *v != *(*mysomeRoot.SomeField)[i] {
-			t.FailNow()
+		if v != nil {
+			if *v != *(*mysomeRoot.SomeField)[i] {
+				t.FailNow()
+			}
+		} else if v == nil {
+			if (*mysomeRoot.SomeField)[i] != nil {
+				t.FailNow()
+			}
 		}
+
 	}
 }
 func TestAssignThingsPrimitiveArraySliceCrossOver(t *testing.T) {

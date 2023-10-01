@@ -27,46 +27,95 @@ type unmarshallResolver struct {
 	ptrToActualValue     reflect.Value // single ptr to no matter what actual value is (for *****int, keeps only *int to the actual value)
 }
 
-func (resolver *unmarshallResolver) resolveDependency(dependentResolver *unmarshallResolver) error {
+// a story for align to the go's json unmarshall is that, when the field is a pointer, and it points to a nil value, the unmarshall will resolve to a `nil pointer` not `pointer to nil value`
+// therefore below is a if check to set the value to `zero` rather than `nilValue of some type`
+func (resolver *unmarshallResolver) resolveSliceDependency(dependentResolver *unmarshallResolver) error {
 	dependentValue := dependentResolver.restoreValue()
-
-	if resolver.outElementKind == reflect.Array || resolver.outElementKind == reflect.Slice {
-
+	if dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
+		dependentValue.Elem().Kind() == reflect.Interface ||
+		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
+		resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).SetZero()
+	} else {
 		resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).Set(dependentValue)
+	}
+	return nil
+}
+func (resolver *unmarshallResolver) resolveStructDependency(dependentResolver *unmarshallResolver) error {
+	field := resolver.ptrToActualValue.Elem().FieldByName(dependentResolver.objectKey)
+	if !field.IsValid() || !field.CanSet() {
+		return NewErrFieldCannotSetOrNotfound(dependentResolver.objectKey)
+	}
 
-	} else if resolver.outElementKind == reflect.Struct {
-		field := resolver.ptrToActualValue.Elem().FieldByName(dependentResolver.objectKey)
-		if !field.IsValid() || !field.CanSet() {
-			return NewErrFieldCannotSetOrNotfound(dependentResolver.objectKey)
-		}
-
+	dependentValue := dependentResolver.restoreValue()
+	if dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
+		dependentValue.Elem().Kind() == reflect.Interface ||
+		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
+		field.SetZero()
+	} else {
 		field.Set(dependentValue)
+	}
+	return nil
+}
 
-	} else if resolver.outElementKind == reflect.Map {
-		key, err := resolver.createMapKeyValueByMapKeyKind(dependentResolver.objectKey)
-		if err != nil {
-			return err
-		}
+func (resolver *unmarshallResolver) resolveMapDependency(dependentResolver *unmarshallResolver) error {
+	key, err := resolver.createMapKeyValueByMapKeyKind(dependentResolver.objectKey)
+	if err != nil {
+		return err
+	}
+
+	dependentValue := dependentResolver.restoreValue()
+	if dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
+		dependentValue.Elem().Kind() == reflect.Interface ||
+		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
+		mapElementType := resolver.ptrToActualValue.Elem().Type().Elem()
+		mapElementZero := reflect.Zero(mapElementType)
+		resolver.ptrToActualValue.Elem().SetMapIndex(key, mapElementZero)
+	} else {
 		resolver.ptrToActualValue.Elem().SetMapIndex(key, dependentValue)
-	} else if resolver.outElementKind == reflect.Interface {
-		if dependentResolver.arrayIndex != -1 { //interface holding slice
-			resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).Set(dependentValue)
-		} else {
-			if len(dependentResolver.objectKey) > 0 { // interface holding map
-				key, err := resolver.createMapKeyValueByMapKeyKind(dependentResolver.objectKey)
-				if err != nil {
-					return err
-				}
-				resolver.ptrToActualValue.Elem().SetMapIndex(key, dependentValue)
-			} else { // in any case, we cannot tell what the real thing is within the interface, set it in
+	}
+	return nil
+}
+func (resolver *unmarshallResolver) resolveInterfaceDependency(dependentResolver *unmarshallResolver) error {
+
+	if dependentResolver.arrayIndex != -1 { //interface holding slice
+		return resolver.resolveSliceDependency(dependentResolver)
+	} else {
+		if len(dependentResolver.objectKey) > 0 { // interface holding map
+			return resolver.resolveMapDependency(dependentResolver)
+		} else { // in any case, we cannot tell what the real thing is within the interface, set it in
+			dependentValue := dependentResolver.restoreValue()
+			if dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
+				dependentValue.Elem().Kind() == reflect.Interface ||
+				dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
+				resolver.ptrToActualValue.Elem().SetZero()
+			} else {
 				resolver.ptrToActualValue.Elem().Set(dependentValue)
 			}
 		}
+	}
+
+	return nil
+}
+func (resolver *unmarshallResolver) resolveDependency(dependentResolver *unmarshallResolver) error {
+	resolver.awaitingResolveCount -= 1
+	if resolver.outElementKind == reflect.Array || resolver.outElementKind == reflect.Slice {
+
+		return resolver.resolveSliceDependency(dependentResolver)
+
+	} else if resolver.outElementKind == reflect.Struct {
+
+		return resolver.resolveStructDependency(dependentResolver)
+
+	} else if resolver.outElementKind == reflect.Map {
+
+		return resolver.resolveMapDependency(dependentResolver)
+
+	} else if resolver.outElementKind == reflect.Interface {
+		return resolver.resolveInterfaceDependency(dependentResolver)
 	} else {
 		return ErrorPrimitiveTypeCannotResolveDependency
 	}
-	resolver.awaitingResolveCount -= 1
-	return nil
+
 }
 
 func (resolver *unmarshallResolver) setValue(value interface{}) {
