@@ -21,7 +21,12 @@ func (i *NumberState) ProcessData(dataSource *bufio.Reader) error {
 	for {
 		nextByte, err := dataSource.Peek(lengthOfNumber)
 		if err != nil {
-			return err
+			if err != io.EOF {
+				return err
+			}
+			lengthOfNumber -= 1
+			//bare number
+			break
 		}
 		if !isJSONNumberByte(nextByte[lengthOfNumber-1]) {
 			lengthOfNumber -= 1 // remove the invalid location

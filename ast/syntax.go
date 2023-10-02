@@ -33,7 +33,7 @@ func (s *syntaxChecker) Length() int {
 func (s *syntaxChecker) Enclose(b byte) error {
 
 	t, err := s.syntaxState.Pop()
-	if err == util.ErrorEodOfStack {
+	if err == util.ErrorEndOfStack {
 		return ErrorSyntaxEmptyStack
 	}
 	if t > AST_NODE_TYPE_BOUNDARY {
@@ -54,13 +54,14 @@ func (s *syntaxChecker) Enclose(b byte) error {
 func (s *syntaxChecker) jsonArrayFormatCheck() error {
 	expectingValue := true
 	lastIsValue := false
+	hasEncounterValue := false
 	for {
 		t, err := s.syntaxState.Pop()
-		if err == util.ErrorEodOfStack {
+		if err == util.ErrorEndOfStack {
 			return ErrorSyntaxEmptyStack
 		}
 		if t == '[' {
-			if !lastIsValue {
+			if hasEncounterValue && !lastIsValue { // deal with [] | [,], the previous is ok hasNeverEncounterValue by pass to ok, later raise error
 				return ErrorSyntaxCommaBehindLastItem
 			}
 			// mark that here is an array in the syntax checker
@@ -72,6 +73,7 @@ func (s *syntaxChecker) jsonArrayFormatCheck() error {
 				return ErrorSyntaxElementNotSeparatedByComma
 			} else {
 				lastIsValue = true
+				hasEncounterValue = true
 			}
 		} else if !expectingValue {
 			if t > AST_NODE_TYPE_BOUNDARY {
@@ -90,15 +92,16 @@ func (s *syntaxChecker) jsonArrayFormatCheck() error {
 func (s *syntaxChecker) jsonObjectCheck() error {
 	expectingValue := true // already pop the } | ]
 	lastIsValue := false
+	hasEncounterValue := false
 	expectingSymbol := byte(':') // first symbol to expect is : then , then : then , ...
 	for {
 		t, err := s.syntaxState.Pop()
-		if err == util.ErrorEodOfStack {
+		if err == util.ErrorEndOfStack {
 			return ErrorSyntaxEmptyStack
 		}
 		// check first otherwise drop into compare with allowed symbol
 		if t == '{' {
-			if !lastIsValue {
+			if hasEncounterValue && !lastIsValue {
 				return ErrorSyntaxCommaBehindLastItem
 			}
 			// enclose the object as a value in the syntax checker, this will save our hands in handling }} or ]} in the syntax checker
@@ -118,6 +121,7 @@ func (s *syntaxChecker) jsonObjectCheck() error {
 					return ErrorSyntaxExtendedSyntaxVariableAsKey
 				}
 				lastIsValue = true
+				hasEncounterValue = true
 			}
 		} else if !expectingValue {
 			if t > AST_NODE_TYPE_BOUNDARY {

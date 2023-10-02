@@ -13,6 +13,7 @@ var (
 	ErrorASTEncloseElementType                = errors.New("enclose element type must be array or object")
 	ErrorASTIncorrectNodeType                 = errors.New("incorrect node type")
 	ErrorIncorrectSyntaxSymbolForConstructAST = errors.New("incorrect character for construct ast")
+	ErrorASTKeyValuePairNotStringAsKey        = errors.New("object key should be string")
 )
 
 var (

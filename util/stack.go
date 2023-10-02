@@ -8,7 +8,7 @@ const (
 	EMPTY_STACK = "Empty Stack"
 )
 
-var ErrorEodOfStack = errors.New("end of stack")
+var ErrorEndOfStack = errors.New("end of stack")
 
 type Stack[T any] struct {
 	s []T
@@ -32,7 +32,7 @@ func (s *Stack[T]) Push(v T) {
 func (s *Stack[T]) Pop() (T, error) {
 	l := len(s.s)
 	if l == 0 {
-		return *new(T), ErrorEodOfStack
+		return *new(T), ErrorEndOfStack
 	}
 
 	res := s.s[l-1]
@@ -43,7 +43,7 @@ func (s *Stack[T]) Pop() (T, error) {
 func (s *Stack[T]) Peek() (T, error) {
 	l := len(s.s)
 	if l == 0 {
-		return *new(T), ErrorEodOfStack
+		return *new(T), ErrorEndOfStack
 	}
 	return s.s[l-1], nil
 }

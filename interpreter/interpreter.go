@@ -157,32 +157,6 @@ func (s *standardVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) 
 	return s.WriteSymbol()
 }
 
-func (s *standardVisitor) Visit(node ast.JsonNode) error {
-
-	switch node.GetNodeType() {
-	case ast.AST_ARRAY:
-		return s.VisitArrayNode(node.(*ast.JsonArrayNode))
-	case ast.AST_OBJECT:
-		return s.VisitObjectNode(node.(*ast.JsonObjectNode))
-	case ast.AST_STRING:
-		return s.VisitStringNode(node.(*ast.JsonStringNode))
-	case ast.AST_NUMBER:
-		return s.VisitNumberNode(node.(*ast.JsonNumberNode))
-	case ast.AST_BOOLEAN:
-		return s.VisitBooleanNode(node.(*ast.JsonBooleanNode))
-	case ast.AST_NULL:
-		return s.VisitNullNode(node.(*ast.JsonNullNode))
-	case ast.AST_STRING_VARIABLE:
-		return s.VisitStringWithVariableNode(node.(*ast.JsonExtendedStringWIthVariableNode))
-	case ast.AST_VARIABLE:
-		return s.VisitVariableNode(node.(*ast.JsonExtendedVariableNode))
-	case ast.AST_KVPAIR:
-		return s.VisitKeyValuePairNode(node.(*ast.JsonKeyValuePairNode))
-	default:
-		return ErrorInternalInterpreterOutdated
-	}
-}
-
 func (s *standardVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
 	s.sb.WriteString("[\n")
 	s.indent++
@@ -238,9 +212,9 @@ func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, err
 		if err != nil {
 			break
 		}
-		err = visitor.Visit(node)
+		err = node.Visit(visitor)
 		if err != nil {
-			if err != util.ErrorEodOfStack {
+			if err != util.ErrorEndOfStack {
 				return "", err
 			} else {
 				break

@@ -136,14 +136,14 @@ func (i *jzoneAST) createValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_
 
 func (i *jzoneAST) finlizeKVPair() error {
 	kvElement, err := i.astTrace.Pop() // pop the kv, because it should be finalized to objet now.
-	if err == util.ErrorEodOfStack {
+	if err == util.ErrorEndOfStack {
 		return ErrorASTStackEmpty
 	}
 	if kvElement.GetNodeType() != AST_KVPAIR {
 		return ErrorASTUnexpectedElement
 	}
 	kvOwnerObj, err := i.astTrace.Peek()
-	if err == util.ErrorEodOfStack {
+	if err == util.ErrorEndOfStack {
 		return ErrorASTStackEmpty
 	}
 	if kvOwnerObj.GetNodeType() != AST_OBJECT {
@@ -156,7 +156,7 @@ func (i *jzoneAST) finlizeKVPair() error {
 func (i *jzoneAST) EncloseLatestElements() error {
 
 	itemToFinalize, err := i.astTrace.Pop()
-	if err == util.ErrorEodOfStack {
+	if err == util.ErrorEndOfStack {
 		i.state = AST_STATE_FINISHED
 		return nil
 	}
@@ -183,7 +183,7 @@ func (i *jzoneAST) storeFinlizedItemToOwner(itemToFinalize JsonNode) error {
 		fallthrough
 	case AST_ARRAY:
 		ownerElement, err := i.astTrace.Peek()
-		if err == util.ErrorEodOfStack {
+		if err == util.ErrorEndOfStack {
 			i.state = AST_STATE_FINISHED
 			return nil // last element in the stack, no owner
 		}

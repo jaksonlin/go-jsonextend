@@ -1,6 +1,10 @@
 package ast
 
-import "github.com/jaksonlin/go-jsonextend/util"
+import (
+	"encoding/base64"
+
+	"github.com/jaksonlin/go-jsonextend/util"
+)
 
 type AST_NODETYPE byte
 
@@ -30,8 +34,12 @@ func nodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 			Value: make([]*JsonKeyValuePairNode, 0),
 		}, nil
 	case AST_KVPAIR:
+		node, ok := value.(JsonStringValueNode)
+		if !ok {
+			return nil, ErrorASTKeyValuePairNotStringAsKey
+		}
 		return &JsonKeyValuePairNode{
-			Key: value.(JsonNode),
+			Key: node,
 		}, nil
 	case AST_STRING:
 		return &JsonStringNode{
@@ -82,7 +90,17 @@ type JsonVisitor interface {
 
 type JsonNode interface {
 	GetNodeType() AST_NODETYPE
-	Visit(visitor JsonVisitor)
+	Visit(visitor JsonVisitor) error
+}
+
+type JsonCollectionNode interface {
+	JsonNode
+	Length() int
+}
+
+type JsonStringValueNode interface {
+	JsonNode
+	GetValue() string
 }
 
 type JsonStringNode struct {
@@ -95,8 +113,35 @@ func (node *JsonStringNode) GetNodeType() AST_NODETYPE {
 	return AST_STRING
 }
 
-func (node *JsonStringNode) Visit(visitor JsonVisitor) {
-	visitor.VisitStringNode(node)
+func (node *JsonStringNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitStringNode(node)
+}
+
+func (node *JsonStringNode) GetValue() string {
+	if len(node.Value) == 2 {
+		return "" // empty string with 2 double quotation marks only
+	} else {
+		return string(node.Value[1 : len(node.Value)-1])
+	}
+}
+
+func (node *JsonStringNode) ToArrayNode() (*JsonArrayNode, error) {
+
+	data, err := base64.StdEncoding.DecodeString(node.GetValue())
+	if err != nil {
+		return nil, err
+	}
+	rs := &JsonArrayNode{
+		Value: make([]JsonNode, 0, len(data)),
+	}
+	for _, n := range data {
+		v := uint8(n)
+		rs.Value = append(rs.Value, &JsonNumberNode{
+			Value: float64(v),
+		})
+	}
+	return rs, nil
+
 }
 
 type JsonNumberNode struct {
@@ -109,8 +154,8 @@ func (node *JsonNumberNode) GetNodeType() AST_NODETYPE {
 	return AST_NUMBER
 }
 
-func (node *JsonNumberNode) Visit(visitor JsonVisitor) {
-	visitor.VisitNumberNode(node)
+func (node *JsonNumberNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitNumberNode(node)
 }
 
 type JsonBooleanNode struct {
@@ -123,8 +168,8 @@ func (node *JsonBooleanNode) GetNodeType() AST_NODETYPE {
 	return AST_BOOLEAN
 }
 
-func (node *JsonBooleanNode) Visit(visitor JsonVisitor) {
-	visitor.VisitBooleanNode(node)
+func (node *JsonBooleanNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitBooleanNode(node)
 }
 
 type JsonNullNode struct {
@@ -137,8 +182,8 @@ func (node *JsonNullNode) GetNodeType() AST_NODETYPE {
 	return AST_NULL
 }
 
-func (node *JsonNullNode) Visit(visitor JsonVisitor) {
-	visitor.VisitNullNode(node)
+func (node *JsonNullNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitNullNode(node)
 }
 
 type JsonArrayNode struct {
@@ -151,16 +196,20 @@ func (node *JsonArrayNode) GetNodeType() AST_NODETYPE {
 	return AST_ARRAY
 }
 
-func (node *JsonArrayNode) Visit(visitor JsonVisitor) {
-	visitor.VisitArrayNode(node)
+func (node *JsonArrayNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitArrayNode(node)
 }
 
 func (node *JsonArrayNode) Append(n JsonNode) {
 	node.Value = append(node.Value, n)
 }
 
+func (node *JsonArrayNode) Length() int {
+	return len(node.Value)
+}
+
 type JsonKeyValuePairNode struct {
-	Key   JsonNode
+	Key   JsonStringValueNode
 	Value JsonNode
 }
 
@@ -170,8 +219,8 @@ func (node *JsonKeyValuePairNode) GetNodeType() AST_NODETYPE {
 	return AST_KVPAIR
 }
 
-func (node *JsonKeyValuePairNode) Visit(visitor JsonVisitor) {
-	visitor.VisitKeyValuePairNode(node)
+func (node *JsonKeyValuePairNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitKeyValuePairNode(node)
 }
 
 func (node *JsonKeyValuePairNode) IsFilled() bool {
@@ -188,12 +237,16 @@ func (node *JsonObjectNode) GetNodeType() AST_NODETYPE {
 	return AST_OBJECT
 }
 
-func (node *JsonObjectNode) Visit(visitor JsonVisitor) {
-	visitor.VisitObjectNode(node)
+func (node *JsonObjectNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitObjectNode(node)
 }
 
 func (node *JsonObjectNode) Append(kvNode *JsonKeyValuePairNode) {
 	node.Value = append(node.Value, kvNode)
+}
+
+func (node *JsonObjectNode) Length() int {
+	return len(node.Value)
 }
 
 type JsonExtendedVariableNode struct {
@@ -201,14 +254,14 @@ type JsonExtendedVariableNode struct {
 	Variable string
 }
 
-var _ JsonNode = &JsonObjectNode{}
+var _ JsonNode = &JsonExtendedVariableNode{}
 
 func (node *JsonExtendedVariableNode) GetNodeType() AST_NODETYPE {
 	return AST_VARIABLE
 }
 
-func (node *JsonExtendedVariableNode) Visit(visitor JsonVisitor) {
-	visitor.VisitVariableNode(node)
+func (node *JsonExtendedVariableNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitVariableNode(node)
 }
 
 func (node *JsonExtendedVariableNode) extractVariable() {
@@ -221,14 +274,14 @@ type JsonExtendedStringWIthVariableNode struct {
 	Variables map[string][]byte
 }
 
-var _ JsonNode = &JsonObjectNode{}
+var _ JsonNode = &JsonExtendedStringWIthVariableNode{}
 
 func (node *JsonExtendedStringWIthVariableNode) GetNodeType() AST_NODETYPE {
 	return AST_STRING_VARIABLE
 }
 
-func (node *JsonExtendedStringWIthVariableNode) Visit(visitor JsonVisitor) {
-	visitor.VisitStringWithVariableNode(node)
+func (node *JsonExtendedStringWIthVariableNode) Visit(visitor JsonVisitor) error {
+	return visitor.VisitStringWithVariableNode(node)
 }
 
 func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
@@ -239,4 +292,8 @@ func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
 	for _, item := range rs {
 		node.Variables[string(item[1])] = item[0]
 	}
+}
+
+func (node *JsonExtendedStringWIthVariableNode) GetValue() string {
+	return node.JsonStringNode.GetValue()
 }
