@@ -26,6 +26,8 @@ func TestAssignThingsPrimitives(t *testing.T) {
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
 
+	var validator test1
+	_ = json.Unmarshal(data, &validator)
 	sm := tokenizer.NewTokenizerStateMachine()
 	err := sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
@@ -40,25 +42,25 @@ func TestAssignThingsPrimitives(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	if someTest1.Hello != "Peter" {
+	if someTest1.Hello != validator.Hello {
 		t.FailNow()
 	}
-	if someTest1.World != 100.123 {
+	if someTest1.World != validator.World {
 		t.FailNow()
 	}
-	if someTest1.World2 != 100 {
+	if someTest1.World2 != validator.World2 {
 		t.FailNow()
 	}
-	if someTest1.Apple != true {
+	if someTest1.Apple != validator.Apple {
 		t.FailNow()
 	}
-	if someTest1.Banana != false {
+	if someTest1.Banana != validator.Banana {
 		t.FailNow()
 	}
 	if someTest1.Something != nil {
 		t.FailNow()
 	}
-	if someTest1.SomethingNotNil != "1234" {
+	if someTest1.SomethingNotNil != validator.SomethingNotNil {
 		t.FailNow()
 	}
 }
@@ -76,9 +78,13 @@ func TestAssignThingsPrimitivesMapInterface(t *testing.T) {
 
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
-
+	var validator map[string]interface{}
+	err := json.Unmarshal(data, &validator)
+	if err != nil {
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -95,25 +101,29 @@ func TestAssignThingsPrimitivesMapInterface(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	if someTest1["Hello"] != "Peter" {
+	if someTest1["Hello"] != validator["Hello"] {
 		t.FailNow()
 	}
-	if someTest1["World"] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+	if someTest1["World"] != validator["World"] { // default to ensure int when interface{} cannot tell us what the type is
 		t.FailNow()
 	}
-	if someTest1["World2"] != 100.0 {
+	if someTest1["World2"] != validator["World2"] {
 		t.FailNow()
 	}
-	if someTest1["Apple"] != true {
+	if someTest1["Apple"] != validator["Apple"] {
 		t.FailNow()
 	}
-	if someTest1["Banana"] != false {
+	if someTest1["Banana"] != validator["Banana"] {
+		t.FailNow()
+	}
+	if validator["Something"] != nil {
 		t.FailNow()
 	}
 	if someTest1["Something"] != nil {
 		t.FailNow()
 	}
-	if someTest1["SomethingNotNil"] != "1234" {
+
+	if someTest1["SomethingNotNil"] != validator["SomethingNotNil"] {
 		t.FailNow()
 	}
 }
@@ -137,9 +147,13 @@ func TestAssignThingsPrimitivesMapInterfaceInNonePointerRoot(t *testing.T) {
 
 	data, _ := json.Marshal(testData)
 	fmt.Println(string(data))
-
+	var validator someRoot
+	err := json.Unmarshal(data, &validator)
+	if err != nil {
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -153,25 +167,28 @@ func TestAssignThingsPrimitivesMapInterfaceInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := rootCheck.MapData
-	if someTest1["Hello"] != "Peter" {
+	if someTest1["Hello"] != validator.MapData["Hello"] {
 		t.FailNow()
 	}
-	if someTest1["World"] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+	if someTest1["World"] != validator.MapData["World"] { // default to ensure int when interface{} cannot tell us what the type is
 		t.FailNow()
 	}
-	if someTest1["World2"] != 100.0 {
+	if someTest1["World2"] != validator.MapData["World2"] {
 		t.FailNow()
 	}
-	if someTest1["Apple"] != true {
+	if someTest1["Apple"] != validator.MapData["Apple"] {
 		t.FailNow()
 	}
-	if someTest1["Banana"] != false {
+	if someTest1["Banana"] != validator.MapData["Banana"] {
+		t.FailNow()
+	}
+	if validator.MapData["Something"] != nil {
 		t.FailNow()
 	}
 	if someTest1["Something"] != nil {
 		t.FailNow()
 	}
-	if someTest1["SomethingNotNil"] != "1234" {
+	if someTest1["SomethingNotNil"] != validator.MapData["SomethingNotNil"] {
 		t.FailNow()
 	}
 }
@@ -196,8 +213,13 @@ func TestAssignThingsPrimitivesMapInterfaceInPointerRoot(t *testing.T) {
 	data, _ := json.Marshal(testData)
 	fmt.Println(string(data))
 
+	var checkerRoot someRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -211,25 +233,26 @@ func TestAssignThingsPrimitivesMapInterfaceInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := *rootCheck.MapData
-	if someTest1["Hello"] != "Peter" {
+	checkerRootMapData := *checkerRoot.MapData
+	if someTest1["Hello"] != checkerRootMapData["Hello"] {
 		t.FailNow()
 	}
-	if someTest1["World"] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+	if someTest1["World"] != checkerRootMapData["World"] { // default to ensure int when interface{} cannot tell us what the type is
 		t.FailNow()
 	}
-	if someTest1["World2"] != 100.0 {
+	if someTest1["World2"] != checkerRootMapData["World2"] {
 		t.FailNow()
 	}
-	if someTest1["Apple"] != true {
+	if someTest1["Apple"] != checkerRootMapData["Apple"] {
 		t.FailNow()
 	}
-	if someTest1["Banana"] != false {
+	if someTest1["Banana"] != checkerRootMapData["Banana"] {
 		t.FailNow()
 	}
 	if someTest1["Something"] != nil {
 		t.FailNow()
 	}
-	if someTest1["SomethingNotNil"] != "1234" {
+	if someTest1["SomethingNotNil"] != checkerRootMapData["SomethingNotNil"] {
 		t.FailNow()
 	}
 }
@@ -265,25 +288,25 @@ func TestAssignThingsPrimitivesMapIntInterface(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	if someTest1[1] != "Peter" {
+	if someTest1[1] != someTest1Check[1] {
 		t.FailNow()
 	}
-	if someTest1[2] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+	if someTest1[2] != someTest1Check[2] { // default to ensure int when interface{} cannot tell us what the type is
 		t.FailNow()
 	}
-	if someTest1[3] != 100.0 {
+	if someTest1[3] != someTest1Check[3] {
 		t.FailNow()
 	}
-	if someTest1[4] != true {
+	if someTest1[4] != someTest1Check[4] {
 		t.FailNow()
 	}
-	if someTest1[5] != false {
+	if someTest1[5] != someTest1Check[5] {
 		t.FailNow()
 	}
-	if someTest1[6] != nil {
+	if someTest1[6] != nil && someTest1Check[6] != someTest1[6] {
 		t.FailNow()
 	}
-	if someTest1[7] != "1234" {
+	if someTest1[7] != someTest1Check[7] {
 		t.FailNow()
 	}
 }
@@ -315,10 +338,10 @@ func TestAssignThingsPrimitivesMapBoolInterface(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	if someTest1[1] != "Peter" {
+	if someTest1[1] != someTest1Check[1] {
 		t.FailNow()
 	}
-	if someTest1[2] != 101.123 { // default to ensure int when interface{} cannot tell us what the type is
+	if someTest1[2] != someTest1Check[2] { // default to ensure int when interface{} cannot tell us what the type is
 		t.FailNow()
 	}
 
@@ -343,9 +366,14 @@ func TestAssignThingsPrimitivesInNonePointerRoot(t *testing.T) {
 	tr := testRoot{t1}
 	data, _ := json.Marshal(tr)
 	fmt.Println(string(data))
-
+	var checkerRoot testRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -359,25 +387,25 @@ func TestAssignThingsPrimitivesInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := someRoot.Test1Data
-	if someTest1.Hello != "Peter" {
+	if someTest1.Hello != checkerRoot.Test1Data.Hello {
 		t.FailNow()
 	}
-	if someTest1.World != 100.123 {
+	if someTest1.World != checkerRoot.Test1Data.World {
 		t.FailNow()
 	}
-	if someTest1.World2 != 100 {
+	if someTest1.World2 != checkerRoot.Test1Data.World2 {
 		t.FailNow()
 	}
-	if someTest1.Apple != true {
+	if someTest1.Apple != checkerRoot.Test1Data.Apple {
 		t.FailNow()
 	}
-	if someTest1.Banana != false {
+	if someTest1.Banana != checkerRoot.Test1Data.Banana {
 		t.FailNow()
 	}
-	if someTest1.Something != nil {
+	if someTest1.Something != nil && someTest1.Something != checkerRoot.Test1Data.Something {
 		t.FailNow()
 	}
-	if someTest1.SomethingNotNil != "1234" {
+	if someTest1.SomethingNotNil != checkerRoot.Test1Data.SomethingNotNil {
 		t.FailNow()
 	}
 }
@@ -402,8 +430,15 @@ func TestAssignThingsPrimitivesInPointerRoot(t *testing.T) {
 	data, _ := json.Marshal(tr)
 	fmt.Println(string(data))
 
+	var checkerRoot testRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -417,25 +452,25 @@ func TestAssignThingsPrimitivesInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := someRoot.Test1Data
-	if someTest1.Hello != "Peter" {
+	if someTest1.Hello != checkerRoot.Test1Data.Hello {
 		t.FailNow()
 	}
-	if someTest1.World != 100.123 {
+	if someTest1.World != checkerRoot.Test1Data.World {
 		t.FailNow()
 	}
-	if someTest1.World2 != 100 {
+	if someTest1.World2 != checkerRoot.Test1Data.World2 {
 		t.FailNow()
 	}
-	if someTest1.Apple != true {
+	if someTest1.Apple != checkerRoot.Test1Data.Apple {
 		t.FailNow()
 	}
-	if someTest1.Banana != false {
+	if someTest1.Banana != checkerRoot.Test1Data.Banana {
 		t.FailNow()
 	}
-	if someTest1.Something != nil {
+	if someTest1.Something != nil && someTest1.Something != checkerRoot.Test1Data.Something {
 		t.FailNow()
 	}
-	if someTest1.SomethingNotNil != "1234" {
+	if someTest1.SomethingNotNil != checkerRoot.Test1Data.SomethingNotNil {
 		t.FailNow()
 	}
 }
@@ -459,9 +494,14 @@ func TestAssignThingsPrimitivesInNestedPointerRoot(t *testing.T) {
 	tr := testRoot{&t1}
 	data, _ := json.Marshal(tr)
 	fmt.Println(string(data))
-
+	var checkerRoot testRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -475,25 +515,26 @@ func TestAssignThingsPrimitivesInNestedPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := **someRoot.Test1Data
-	if someTest1.Hello != "Peter" {
+	checkerTest1 := **checkerRoot.Test1Data
+	if someTest1.Hello != checkerTest1.Hello {
 		t.FailNow()
 	}
-	if someTest1.World != 100.123 {
+	if someTest1.World != checkerTest1.World {
 		t.FailNow()
 	}
-	if someTest1.World2 != 100 {
+	if someTest1.World2 != checkerTest1.World2 {
 		t.FailNow()
 	}
-	if someTest1.Apple != true {
+	if someTest1.Apple != checkerTest1.Apple {
 		t.FailNow()
 	}
-	if someTest1.Banana != false {
+	if someTest1.Banana != checkerTest1.Banana {
 		t.FailNow()
 	}
-	if someTest1.Something != nil {
+	if someTest1.Something != nil && someTest1.Something != checkerTest1.Something {
 		t.FailNow()
 	}
-	if someTest1.SomethingNotNil != "1234" {
+	if someTest1.SomethingNotNil != checkerTest1.SomethingNotNil {
 		t.FailNow()
 	}
 }
@@ -526,9 +567,15 @@ func TestAssignThingsPrimitivesInNestedStructRoot(t *testing.T) {
 
 	data, _ := json.Marshal(tr)
 	fmt.Println(string(data))
+	var checkerRoot testRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -542,28 +589,30 @@ func TestAssignThingsPrimitivesInNestedStructRoot(t *testing.T) {
 		t.FailNow()
 	}
 	someTest1 := *(**someRoot.Test3Data).Test2Data.Test1Data
-	if someTest1.Hello != "Peter" {
+	checkerTest1 := *(**checkerRoot.Test3Data).Test2Data.Test1Data
+	if someTest1.Hello != checkerTest1.Hello {
 		t.FailNow()
 	}
-	if someTest1.World != 100.123 {
+	if someTest1.World != checkerTest1.World {
 		t.FailNow()
 	}
-	if someTest1.World2 != 100 {
+	if someTest1.World2 != checkerTest1.World2 {
 		t.FailNow()
 	}
-	if someTest1.Apple != true {
+	if someTest1.Apple != checkerTest1.Apple {
 		t.FailNow()
 	}
-	if someTest1.Banana != false {
+	if someTest1.Banana != checkerTest1.Banana {
 		t.FailNow()
 	}
-	if someTest1.Something != nil {
+	if someTest1.Something != nil && someTest1.Something != checkerTest1.Something {
 		t.FailNow()
 	}
-	if someTest1.SomethingNotNil != "1234" {
+	if someTest1.SomethingNotNil != checkerTest1.SomethingNotNil {
 		t.FailNow()
 	}
 }
+
 func TestAssignThingsPrimitivePointers(t *testing.T) {
 	type test1 struct {
 		Hello           *string
@@ -788,9 +837,14 @@ func TestAssignThingsPrimitiveSlice(t *testing.T) {
 	t1 := []int{1, 2, 3, 4, 5}
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
+	var checker []int
+	err := json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
 
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -804,7 +858,7 @@ func TestAssignThingsPrimitiveSlice(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1 {
-		if v != t1[i] {
+		if v != checker[i] {
 			t.FailNow()
 		}
 	}
@@ -821,8 +875,15 @@ func TestAssignThingsPrimitiveSliceInNonePointerRoot(t *testing.T) {
 	data, _ := json.Marshal(test1)
 	fmt.Println(string(data))
 
+	var checkerRoot someRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -836,7 +897,7 @@ func TestAssignThingsPrimitiveSliceInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1.SomeField {
-		if v != test1.SomeField[i] {
+		if v != checkerRoot.SomeField[i] {
 			t.FailNow()
 		}
 	}
@@ -936,8 +997,15 @@ func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
 	data, _ := json.Marshal(test1)
 	fmt.Println(string(data))
 
+	var checkerRoot someRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -951,7 +1019,7 @@ func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range *someTest1.SomeField {
-		if v != (*test1.SomeField)[i] {
+		if v != (*checkerRoot.SomeField)[i] {
 			t.FailNow()
 		}
 	}
@@ -1113,8 +1181,15 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
 
+	var checkerRoot [5]int
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1128,7 +1203,7 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1 {
-		if v != t1[i] {
+		if v != checkerRoot[i] {
 			t.FailNow()
 		}
 	}
@@ -1142,8 +1217,15 @@ func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 	var checker [4]interface{}
 	_ = json.Unmarshal(data, &checker)
 
+	var checkerRoot [4]interface{}
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1157,7 +1239,7 @@ func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1 {
-		if v != checker[i] {
+		if v != checkerRoot[i] {
 			t.FailNow()
 		}
 	}
@@ -1174,8 +1256,15 @@ func TestAssignThingsPrimitiveArrayInNonePointerRoot(t *testing.T) {
 	data, _ := json.Marshal(test1)
 	fmt.Println(string(data))
 
+	var checkerRoot someRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1189,7 +1278,7 @@ func TestAssignThingsPrimitiveArrayInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1.SomeField {
-		if v != test1.SomeField[i] {
+		if v != checkerRoot.SomeField[i] {
 			t.FailNow()
 		}
 	}
@@ -1205,9 +1294,16 @@ func TestAssignThingsPrimitiveArrayInPointerRoot(t *testing.T) {
 
 	data, _ := json.Marshal(test1)
 	fmt.Println(string(data))
+	var checkerRoot someRoot
+
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1221,7 +1317,7 @@ func TestAssignThingsPrimitiveArrayInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range *someTest1.SomeField {
-		if v != (*test1.SomeField)[i] {
+		if v != (*checkerRoot.SomeField)[i] {
 			t.FailNow()
 		}
 	}
@@ -1289,7 +1385,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range *someTest1.SomeField {
-		if v != (*&mysomeRoot.SomeField)[i] {
+		if v != (*mysomeRoot.SomeField)[i] {
 			t.FailNow()
 		}
 	}
@@ -1347,9 +1443,15 @@ func TestAssignThingsPrimitiveArraySliceCrossOver(t *testing.T) {
 	fmt.Println(reflect.TypeOf(t1).Kind())
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
+	var checkerRoot [5]int
 
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1363,7 +1465,7 @@ func TestAssignThingsPrimitiveArraySliceCrossOver(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1 {
-		if v != t1[i] {
+		if v != checkerRoot[i] {
 			t.FailNow()
 		}
 	}
@@ -1374,9 +1476,15 @@ func TestAssignThingsPrimitiveSliceArrayCrossOver(t *testing.T) {
 	fmt.Println(reflect.TypeOf(t1).Kind())
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
+	var checkerRoot []int
 
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1390,7 +1498,7 @@ func TestAssignThingsPrimitiveSliceArrayCrossOver(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1 {
-		if v != t1[i] {
+		if v != checkerRoot[i] {
 			t.FailNow()
 		}
 	}
@@ -1407,9 +1515,15 @@ func TestAssignThingsPrimitiveArrayPointerValues(t *testing.T) {
 	fmt.Println(reflect.TypeOf(t1).Kind())
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
+	var checkerRoot [5]*int
 
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
 	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData(strings.NewReader(string(data)))
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1423,7 +1537,7 @@ func TestAssignThingsPrimitiveArrayPointerValues(t *testing.T) {
 		t.FailNow()
 	}
 	for i, v := range someTest1 {
-		if *v != *t1[i] {
+		if *v != *checkerRoot[i] {
 			t.FailNow()
 		}
 	}
