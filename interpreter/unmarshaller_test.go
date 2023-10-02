@@ -2541,6 +2541,106 @@ func TestInterfaceNil(t *testing.T) {
 	}
 }
 
+func TestEmptyString(t *testing.T) {
+	var someinterface string
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 string
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2 != "" {
+		t.FailNow()
+	}
+}
+func TestString(t *testing.T) {
+	var someinterface string = "123"
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 string
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2 != "123" {
+		t.FailNow()
+	}
+}
+
+func TestBool(t *testing.T) {
+	var someinterface bool = false
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 bool
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2 != false {
+		t.FailNow()
+	}
+}
+
+func TestNumber(t *testing.T) {
+	var someinterface int = 1234567
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+	var someInt int
+	_ = json.Unmarshal(data, &someInt)
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 int
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2 != someInt {
+		t.FailNow()
+	}
+}
 func TestFinalExam(t *testing.T) {
 
 	type SomeStruct1 struct {
@@ -2771,4 +2871,70 @@ func TestFinalExam(t *testing.T) {
 		t.FailNow()
 	}
 
+}
+
+func TestVariable(t *testing.T) {
+	sample := `{
+		"hello1":${myvariable1},
+		"hello2":${myvariable2},
+		"hello3":${myvariable3},
+		"hello4":${myvariable4},
+		"hello5":${myvariable5},
+		"hello6":${myvariable6},
+		"hello7":"hey man: ${myvariable7}",
+		"hello8":"hey man! ${myvariable8}"
+		}`
+	var variables map[string]interface{} = map[string]interface{}{
+		"myvariable1": 1,
+		"myvariable2": "123",
+		"myvariable3": true,
+		"myvariable4": nil,
+		"myvariable5": []interface{}{1, 2, 3},
+		"myvariable6": map[string]interface{}{"happy": "Cat"},
+		"myvariable7": "whats up!",
+		"myvariable8": "",
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(strings.NewReader(sample))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someReceiver2 map[string]interface{}
+	err = interpreter.UnmarshallAST(node, variables, &someReceiver2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someReceiver2["hello1"] != 1 {
+		t.FailNow()
+	}
+
+	if someReceiver2["hello2"] != "123" {
+		t.FailNow()
+	}
+
+	if someReceiver2["hello3"] != true {
+		t.FailNow()
+	}
+
+	if someReceiver2["hello4"] != nil {
+		t.FailNow()
+	}
+	for i, v := range someReceiver2["hello5"].([]interface{}) {
+		if i+1 != v {
+			t.FailNow()
+		}
+	}
+	if someReceiver2["hello6"].(map[string]interface{})["happy"] != "Cat" {
+		t.FailNow()
+	}
+	if someReceiver2["hello7"] != "hey man: whats up!" {
+		t.FailNow()
+	}
+	if someReceiver2["hello8"] != "hey man! " {
+		t.FailNow()
+	}
 }

@@ -36,7 +36,7 @@ func resolveVariable(variableNode *ast.JsonExtendedVariableNode, resolver *unmar
 
 func resolveStringVariable(stringVariable *ast.JsonExtendedStringWIthVariableNode, resolver *unmarshallOptions) ([]byte, error) {
 
-	var resultBytes []byte
+	var resultBytes []byte = make([]byte, len(stringVariable.Value))
 	copy(resultBytes, stringVariable.Value)
 	for variableName, replacer := range stringVariable.Variables {
 		variableValue, ok := resolver.variables[variableName]
@@ -58,6 +58,13 @@ func resolveStringVariable(stringVariable *ast.JsonExtendedStringWIthVariableNod
 			}
 		} else {
 			resultBytes = bytes.ReplaceAll(resultBytes, replacer, variableValueBytes)
+		}
+	}
+	if resultBytes[0] == '"' {
+		if len(resultBytes) == 2 {
+			resultBytes = []byte("")
+		} else {
+			resultBytes = resultBytes[1 : len(resultBytes)-1]
 		}
 	}
 	return resultBytes, nil
