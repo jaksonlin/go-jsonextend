@@ -256,6 +256,201 @@ func TestAssignThingsPrimitivesMapInterfaceInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestAssignThingsPrimitivesMapInterfaceInInterfaceRoot(t *testing.T) {
+	var t1 interface{} = map[string]interface{}{
+		"Hello":           "Peter",
+		"World":           101.123,
+		"World2":          100,
+		"Apple":           true,
+		"Banana":          false,
+		"Something":       nil,
+		"SomethingNotNil": "1234",
+	}
+
+	type someRoot struct {
+		MapData interface{}
+	}
+
+	testData := someRoot{t1}
+
+	data, _ := json.Marshal(testData)
+	fmt.Println(string(data))
+
+	var checkerRoot someRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.FailNow()
+	}
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var rootCheck someRoot
+	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	someTest1 := (rootCheck.MapData).(map[string]interface{})
+	checkerRootMapData := (checkerRoot.MapData).(map[string]interface{})
+	if someTest1["Hello"] != checkerRootMapData["Hello"] {
+		t.FailNow()
+	}
+	if someTest1["World"] != checkerRootMapData["World"] { // default to ensure int when interface{} cannot tell us what the type is
+		t.FailNow()
+	}
+	if someTest1["World2"] != checkerRootMapData["World2"] {
+		t.FailNow()
+	}
+	if someTest1["Apple"] != checkerRootMapData["Apple"] {
+		t.FailNow()
+	}
+	if someTest1["Banana"] != checkerRootMapData["Banana"] {
+		t.FailNow()
+	}
+	if someTest1["Something"] != nil {
+		t.FailNow()
+	}
+	if someTest1["SomethingNotNil"] != checkerRootMapData["SomethingNotNil"] {
+		t.FailNow()
+	}
+}
+
+func TestAssignThingsPrimitivesMapInterfaceInInterfacePointerRoot(t *testing.T) {
+	var t1 interface{} = map[string]interface{}{
+		"Hello":           "Peter",
+		"World":           101.123,
+		"World2":          100,
+		"Apple":           true,
+		"Banana":          false,
+		"Something":       nil,
+		"SomethingNotNil": "1234",
+	}
+
+	type someRoot struct {
+		MapData *interface{}
+	}
+
+	testData := someRoot{&t1}
+
+	data, _ := json.Marshal(testData)
+	fmt.Println(string(data))
+
+	var checkerRoot someRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.FailNow()
+	}
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var rootCheck someRoot
+	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	someTest1 := (*rootCheck.MapData).(map[string]interface{})
+	checkerRootMapData := (*checkerRoot.MapData).(map[string]interface{})
+	if someTest1["Hello"] != checkerRootMapData["Hello"] {
+		t.FailNow()
+	}
+	if someTest1["World"] != checkerRootMapData["World"] { // default to ensure int when interface{} cannot tell us what the type is
+		t.FailNow()
+	}
+	if someTest1["World2"] != checkerRootMapData["World2"] {
+		t.FailNow()
+	}
+	if someTest1["Apple"] != checkerRootMapData["Apple"] {
+		t.FailNow()
+	}
+	if someTest1["Banana"] != checkerRootMapData["Banana"] {
+		t.FailNow()
+	}
+	if someTest1["Something"] != nil {
+		t.FailNow()
+	}
+	if someTest1["SomethingNotNil"] != checkerRootMapData["SomethingNotNil"] {
+		t.FailNow()
+	}
+}
+
+func TestAssignThingsPrimitivesMapInterfaceInInterfacePointersRoot(t *testing.T) {
+	var t1 interface{} = map[string]interface{}{
+		"Hello":           "Peter",
+		"World":           101.123,
+		"World2":          100,
+		"Apple":           true,
+		"Banana":          false,
+		"Something":       nil,
+		"SomethingNotNil": "1234",
+	}
+
+	type someRoot struct {
+		MapData ****interface{}
+	}
+
+	t2 := &t1
+	t3 := &t2
+	t4 := &t3
+	testData := someRoot{&t4}
+
+	data, _ := json.Marshal(testData)
+	fmt.Println(string(data))
+
+	var checkerRoot someRoot
+	err := json.Unmarshal(data, &checkerRoot)
+	if err != nil {
+		t.FailNow()
+	}
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+
+	var rootCheck someRoot
+	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	someTest1 := (****rootCheck.MapData).(map[string]interface{})
+	checkerRootMapData := (****checkerRoot.MapData).(map[string]interface{})
+	if someTest1["Hello"] != checkerRootMapData["Hello"] {
+		t.FailNow()
+	}
+	if someTest1["World"] != checkerRootMapData["World"] { // default to ensure int when interface{} cannot tell us what the type is
+		t.FailNow()
+	}
+	if someTest1["World2"] != checkerRootMapData["World2"] {
+		t.FailNow()
+	}
+	if someTest1["Apple"] != checkerRootMapData["Apple"] {
+		t.FailNow()
+	}
+	if someTest1["Banana"] != checkerRootMapData["Banana"] {
+		t.FailNow()
+	}
+	if someTest1["Something"] != nil {
+		t.FailNow()
+	}
+	if someTest1["SomethingNotNil"] != checkerRootMapData["SomethingNotNil"] {
+		t.FailNow()
+	}
+}
 func TestAssignThingsPrimitivesMapIntInterface(t *testing.T) {
 	var t1 map[int]interface{} = map[int]interface{}{
 		1: "Peter",

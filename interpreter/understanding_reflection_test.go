@@ -412,3 +412,27 @@ func TestNilInterfaceint(t *testing.T) {
 	fmt.Println(data.Name15) // Prints: map[1:John 2:Doe]
 
 }
+
+func TestInterfaceReceiver(t *testing.T) {
+	var myMap map[string]interface{} = map[string]interface{}{"Hello": "World"}
+	var myInterface interface{} = myMap
+	val := reflect.ValueOf(myInterface)
+	fmt.Println(val.Kind()) // prints map
+	if val.Kind() != reflect.Map {
+		t.FailNow()
+	}
+	var nestedInterface interface{} = myInterface
+	nestedInterfaceCheck := reflect.ValueOf(nestedInterface)
+	if nestedInterfaceCheck.Kind() != reflect.Map {
+		t.FailNow()
+	}
+	// this is the only way you can get reflect.Interface
+	ptrToInterface := reflect.ValueOf(&myInterface)
+	if ptrToInterface.Kind() != reflect.Pointer {
+		t.FailNow()
+	}
+	if ptrToInterface.Elem().Kind() != reflect.Interface {
+		t.FailNow()
+	}
+
+}

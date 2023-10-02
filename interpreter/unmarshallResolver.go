@@ -133,6 +133,11 @@ func (resolver *unmarshallResolver) restoreValue() reflect.Value {
 	if !resolver.isPointerValue {
 		return resolver.ptrToActualValue.Elem() // remove the pointer we add (newUnmarshallResolver)
 	} else {
+		// the field is *interface{}
+		if resolver.outElementKind == reflect.Interface {
+			var value interface{} = resolver.ptrToActualValue.Elem().Interface()
+			resolver.ptrToActualValue = reflect.ValueOf(&value)
+		}
 		// actual value
 		if resolver.numberOfPointer == 1 {
 			return resolver.ptrToActualValue // just use our value holder
