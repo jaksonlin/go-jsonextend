@@ -35,12 +35,18 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 	} else if childElementType.Kind() == reflect.Struct {
 
 		fieldInfo := resolver.ptrToActualValue.Elem().FieldByName(key) // struct field
+		if !fieldInfo.IsValid() || !fieldInfo.CanSet() {
+			return nil, NewErrorFieldNotValid(key)
+		}
 		childElementType = fieldInfo.Type()
 
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver := newUnmarshallResolver(valueNode, childElementType, resolver.options)
+	newResolver, err := newUnmarshallResolver(valueNode, childElementType, resolver.options)
+	if err != nil {
+		return nil, err
+	}
 
 	// 3. create relation
 	newResolver.bindObjectParent(key, resolver)
@@ -61,7 +67,10 @@ func (resolver *unmarshallResolver) createArrayElementResolver(index int, node a
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver := newUnmarshallResolver(node, childElementType, resolver.options)
+	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options)
+	if err != nil {
+		return nil, err
+	}
 
 	// 3. create relation
 	newResolver.bindArrayLikeParent(index, resolver)
@@ -96,7 +105,10 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out inte
 
 	options := NewUnMarshallOptions(variables)
 	traverseStack := options.resolverStack
-	resolver := newUnmarshallResolver(node, valueItem.Type(), options)
+	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options)
+	if err != nil {
+		return err
+	}
 	traverseStack.Push(resolver)
 
 	for {
@@ -132,6 +144,6 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out inte
 
 	}
 	actualValue := resolver.restoreValue().Elem()
-	valueItem.Elem().Set(actualValue)
+	valueItem.Elem().Set(actualValue.Convert(valueItem.Elem().Type()))
 	return nil
 }

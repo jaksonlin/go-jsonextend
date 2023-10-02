@@ -36,7 +36,7 @@ func (resolver *unmarshallResolver) resolveSliceDependency(dependentResolver *un
 		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
 		resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).SetZero()
 	} else {
-		resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).Set(dependentValue)
+		resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).Set(dependentValue.Convert(resolver.ptrToActualValue.Elem().Type().Elem()))
 	}
 	return nil
 }
@@ -52,7 +52,7 @@ func (resolver *unmarshallResolver) resolveStructDependency(dependentResolver *u
 		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
 		field.SetZero()
 	} else {
-		field.Set(dependentValue)
+		field.Set(dependentValue.Convert(field.Type()))
 	}
 	return nil
 }
@@ -71,7 +71,7 @@ func (resolver *unmarshallResolver) resolveMapDependency(dependentResolver *unma
 		mapElementZero := reflect.Zero(mapElementType)
 		resolver.ptrToActualValue.Elem().SetMapIndex(key, mapElementZero)
 	} else {
-		resolver.ptrToActualValue.Elem().SetMapIndex(key, dependentValue)
+		resolver.ptrToActualValue.Elem().SetMapIndex(key, dependentValue.Convert(resolver.ptrToActualValue.Elem().Type().Elem()))
 	}
 	return nil
 }
@@ -89,7 +89,7 @@ func (resolver *unmarshallResolver) resolveInterfaceDependency(dependentResolver
 				dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
 				resolver.ptrToActualValue.Elem().SetZero()
 			} else {
-				resolver.ptrToActualValue.Elem().Set(dependentValue)
+				resolver.ptrToActualValue.Elem().Set(dependentValue.Convert(resolver.ptrToActualValue.Elem().Type()))
 			}
 		}
 	}
@@ -123,7 +123,7 @@ func (resolver *unmarshallResolver) setValue(value interface{}) {
 		nilValue := reflect.Zero(resolver.ptrToActualValue.Elem().Type())
 		resolver.ptrToActualValue.Elem().Set(nilValue)
 	} else {
-		resolver.ptrToActualValue.Elem().Set(reflect.ValueOf(value))
+		resolver.ptrToActualValue.Elem().Set(reflect.ValueOf(value).Convert(resolver.ptrToActualValue.Elem().Type()))
 	}
 }
 
@@ -168,8 +168,8 @@ func (resolver *unmarshallResolver) bindArrayLikeParent(index int, parent *unmar
 func newUnmarshallResolver(
 	node ast.JsonNode,
 	outType reflect.Type,
-	options *unmarshallOptions) *unmarshallResolver {
-
+	options *unmarshallOptions) (*unmarshallResolver, error) {
+	var nodeToWork ast.JsonNode = node
 	someOutType := outType
 	numberOfPointer := 0
 	var elementKind reflect.Kind
@@ -183,7 +183,16 @@ func newUnmarshallResolver(
 	// use a pointer to hold no matter what it is inside
 	switch someOutType.Kind() {
 	case reflect.Slice:
-		numberOfElement := node.(*ast.JsonArrayNode).Length()
+
+		if someOutType.Elem().Kind() == reflect.Uint8 {
+			// base64 string
+			n, err := node.(*ast.JsonStringNode).ToArrayNode()
+			if err != nil {
+				return nil, err
+			}
+			nodeToWork = n
+		}
+		numberOfElement := nodeToWork.(*ast.JsonArrayNode).Length()
 		sliceType := reflect.SliceOf(someOutType.Elem())
 		sliceValue := reflect.MakeSlice(sliceType, numberOfElement, numberOfElement) // use index to manipulate the slice
 		ptrToActualValue = reflect.New(sliceValue.Type())
@@ -222,7 +231,7 @@ func newUnmarshallResolver(
 			collectionDataType = newMap.Type().Elem()
 		} else {
 			ptrToActualValue = reflect.New(someOutType)
-			//ptrToActualValue.Elem().Set(reflect.Zero(someOutType))
+			ptrToActualValue.Elem().Set(reflect.Zero(someOutType))
 		}
 	default: // primitives
 		ptrToActualValue = reflect.New(someOutType)
@@ -232,7 +241,7 @@ func newUnmarshallResolver(
 
 	base := &unmarshallResolver{
 		options:              options,
-		astNode:              node,
+		astNode:              nodeToWork,
 		ptrToActualValue:     ptrToActualValue,
 		awaitingResolveCount: 0,
 		awaitingResolve:      false,
@@ -243,7 +252,7 @@ func newUnmarshallResolver(
 		outElementKind:       elementKind,
 		collectionDataType:   collectionDataType,
 	}
-	return base
+	return base, nil
 }
 
 var _ ast.JsonVisitor = &unmarshallResolver{}

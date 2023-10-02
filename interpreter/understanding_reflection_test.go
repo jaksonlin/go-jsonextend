@@ -20,26 +20,26 @@ func (i *ImplementingStruct) Method() string {
 }
 
 type SomeStruct struct {
-	Name1  string                 `json:"name1"` //checked
-	Name2  []int                  `json:"name2"` //checked
-	Name3  map[string]int         `json:"name3"`
-	Name4  []interface{}          `json:"name4"` // checked
-	Name5  []Bro                  `json:"name5"`
-	Name6  []*Bro                 `json:"name6"`
-	Name7  Bro                    `json:"name7"` //checked
-	Name8  *Bro                   `json:"name8"` //checked
-	Name9  map[string]interface{} `json:"name9"`
-	Name10 map[int]Bro            `json:"name10"` //go also not support unmarshal, json now allow number as key,
+	Name1  string                 `json:"name1"`  //checked
+	Name2  []int                  `json:"name2"`  //checked
+	Name3  map[string]int         `json:"name3"`  //checked
+	Name4  []interface{}          `json:"name4"`  //checked
+	Name5  []Bro                  `json:"name5"`  //checked
+	Name6  []*Bro                 `json:"name6"`  //checked
+	Name7  Bro                    `json:"name7"`  //checked
+	Name8  *Bro                   `json:"name8"`  //checked
+	Name9  map[string]interface{} `json:"name9"`  //checked
+	Name10 map[int]Bro            `json:"name10"` //checked
 	Name11 [3]int                 `json:"name11"` //checked
 	Name12 MyInterface            `json:"name12"` // pointer
 	Name13 MyInterface            `json:"name13"` // struct
 	// ... and so on for other cases
 	Name14 []map[string][]interface{} `json:"name14"`
-	Name15 interface{}                `json:"name15"` // covert to map[string]interface{}
-	Name16 *Bro                       `json:"name16"` //coded, for nil, the kv pair len==0, no additional code
-	Name17 map[string]Bro             `json:"name17"`
-	Name18 []int                      `json:"name18"`
-	Name19 MyType                     `json:"name19"`
+	Name15 interface{}                `json:"name15"` //checked covert to map[string]interface{}
+	Name16 *Bro                       `json:"name16"` //checked
+	Name17 map[string]Bro             `json:"name17"` //checked
+	Name18 []int                      `json:"name18"` //checked
+	Name19 MyType                     `json:"name19"` //checked
 }
 
 var (

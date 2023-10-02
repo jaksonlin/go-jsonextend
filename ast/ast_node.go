@@ -1,6 +1,10 @@
 package ast
 
-import "github.com/jaksonlin/go-jsonextend/util"
+import (
+	"encoding/base64"
+
+	"github.com/jaksonlin/go-jsonextend/util"
+)
 
 type AST_NODETYPE byte
 
@@ -119,6 +123,25 @@ func (node *JsonStringNode) GetValue() string {
 	} else {
 		return string(node.Value[1 : len(node.Value)-1])
 	}
+}
+
+func (node *JsonStringNode) ToArrayNode() (*JsonArrayNode, error) {
+
+	data, err := base64.StdEncoding.DecodeString(node.GetValue())
+	if err != nil {
+		return nil, err
+	}
+	rs := &JsonArrayNode{
+		Value: make([]JsonNode, 0, len(data)),
+	}
+	for _, n := range data {
+		v := uint8(n)
+		rs.Value = append(rs.Value, &JsonNumberNode{
+			Value: float64(v),
+		})
+	}
+	return rs, nil
+
 }
 
 type JsonNumberNode struct {

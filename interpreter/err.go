@@ -14,6 +14,8 @@ const (
 	ExpectingArrayInPointerFindOthers  = "expecting array inside pointer but find %s"
 	VariableNotFound                   = "variable value for %s not found"
 	FieldTypeNotMatchAST               = "field type %s is not of ast collection node type"
+	KVKindNotMatch                     = "expect %s as key but value is not :%#v"
+	FieldNotValid                      = "field not valid %s"
 )
 
 var (
@@ -75,5 +77,9 @@ func NewErrorInternalFieldTypeNotMatchAST(kind string) error {
 }
 
 func NewErrorInternalMapKeyValueKindNotMatch(kind string, value interface{}) error {
-	return fmt.Errorf("expect %s as key but value is not :%#v", kind, value)
+	return fmt.Errorf(KVKindNotMatch, kind, value)
+}
+
+func NewErrorFieldNotValid(field string) error {
+	return fmt.Errorf(FieldNotValid, field)
 }
