@@ -7,8 +7,6 @@ import (
 )
 
 var dummyMap map[string]interface{}
-var dummySlice []interface{}
-var dummyNilPtr *interface{}
 
 // we hold a pointer to these field rather than keeping the field's reflect.Value directly
 // number of pointer of the original field, not including the one we create to hold the filed
@@ -167,6 +165,12 @@ func newUnmarshallResolver(
 	numberOfPointer := 0
 	var elementKind reflect.Kind
 	var collectionDataType reflect.Type = nil
+	var isNil = false
+	n, ok := nodeToWork.(*ast.JsonNullNode)
+	if ok {
+		isNil = true
+		nodeToWork = n
+	}
 	isPointerValue := someOutType.Kind() == reflect.Pointer
 	for someOutType.Kind() == reflect.Pointer {
 		someOutType = someOutType.Elem()
@@ -176,16 +180,27 @@ func newUnmarshallResolver(
 	// use a pointer to hold no matter what it is inside
 	switch someOutType.Kind() {
 	case reflect.Slice:
+		numberOfElement := 0
 
-		if someOutType.Elem().Kind() == reflect.Uint8 {
-			// base64 string
-			n, err := node.(*ast.JsonStringNode).ToArrayNode()
-			if err != nil {
-				return nil, err
+		if !isNil {
+			// in golang json processing for slice of Uint8 it will convert to base64
+			if someOutType.Elem().Kind() == reflect.Uint8 && nodeToWork.GetNodeType() == ast.AST_STRING {
+				n, err := nodeToWork.(*ast.JsonStringNode).ToArrayNode()
+				if err != nil {
+					return nil, err
+				}
+				numberOfElement = n.Length()
+				nodeToWork = n
+			} else {
+				n, ok := nodeToWork.(*ast.JsonArrayNode)
+				if !ok {
+					return nil, ErrorInternalExpectingArrayLikeObject
+				}
+				numberOfElement = n.Length()
+				nodeToWork = n
 			}
-			nodeToWork = n
 		}
-		numberOfElement := nodeToWork.(*ast.JsonArrayNode).Length()
+
 		sliceType := reflect.SliceOf(someOutType.Elem())
 		sliceValue := reflect.MakeSlice(sliceType, numberOfElement, numberOfElement) // use index to manipulate the slice
 		ptrToActualValue = reflect.New(sliceValue.Type())
@@ -193,7 +208,11 @@ func newUnmarshallResolver(
 		elementKind = reflect.Slice
 		collectionDataType = sliceValue.Type().Elem()
 	case reflect.Array:
-		numberOfElement := node.(*ast.JsonArrayNode).Length()
+		n, ok := nodeToWork.(*ast.JsonArrayNode)
+		if !ok {
+			return nil, ErrorInternalExpectingArrayLikeObject
+		}
+		numberOfElement := n.Length()
 		arrayType := reflect.ArrayOf(numberOfElement, someOutType.Elem())
 		ptrToActualValue = reflect.New(arrayType)
 		elementKind = reflect.Array
@@ -210,14 +229,14 @@ func newUnmarshallResolver(
 	case reflect.Interface:
 		// someField: interface{}
 		elementKind = reflect.Interface
-		if node.GetNodeType() == ast.AST_ARRAY {
-			numberOfElement := node.(*ast.JsonArrayNode).Length()
+		if nodeToWork.GetNodeType() == ast.AST_ARRAY {
+			numberOfElement := nodeToWork.(*ast.JsonArrayNode).Length()
 			sliceType := reflect.SliceOf(reflect.TypeOf((*interface{})(nil)).Elem())
 			sliceValue := reflect.MakeSlice(sliceType, numberOfElement, numberOfElement) // use index to manipulate the slice
 			ptrToActualValue = reflect.New(sliceValue.Type())
 			ptrToActualValue.Elem().Set(sliceValue)
 			collectionDataType = sliceValue.Type().Elem()
-		} else if node.GetNodeType() == ast.AST_OBJECT {
+		} else if nodeToWork.GetNodeType() == ast.AST_OBJECT {
 			newMap := reflect.MakeMap(reflect.TypeOf(dummyMap))
 			ptrToActualValue = reflect.New(newMap.Type())
 			ptrToActualValue.Elem().Set(newMap)
@@ -244,6 +263,7 @@ func newUnmarshallResolver(
 		isPointerValue:       isPointerValue,
 		outElementKind:       elementKind,
 		collectionDataType:   collectionDataType,
+		IsNil:                isNil,
 	}
 	return base, nil
 }
@@ -299,7 +319,6 @@ func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) 
 
 func (resolver *unmarshallResolver) VisitNullNode(node *ast.JsonNullNode) error {
 	resolver.setValue(node.Value)
-	resolver.IsNil = true
 	return resolver.resolve()
 }
 

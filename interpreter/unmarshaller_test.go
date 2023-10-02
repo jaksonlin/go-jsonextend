@@ -2329,8 +2329,12 @@ func TestCustomizeType(t *testing.T) {
 		Age    MyType
 		Ages   []MyType // base64 string
 		AgeMap map[MyType][]MyType
+		Ages2  [2]MyType
 	}
-	var somePtr *someStruct = &someStruct{12, []MyType{1, 2, 3}, map[MyType][]MyType{1: []MyType{1, 2, 3}, 2: []MyType{1, 2, 3}, 3: []MyType{1, 2, 3}}}
+	var somePtr *someStruct = &someStruct{
+		12, []MyType{1, 2, 3},
+		map[MyType][]MyType{1: []MyType{4, 5, 6}, 2: []MyType{7, 8, 9}, 3: []MyType{10, 11, 12}},
+		[2]MyType{13, 14}}
 
 	data, _ = json.Marshal(somePtr)
 	var checker someStruct
@@ -2357,6 +2361,11 @@ func TestCustomizeType(t *testing.T) {
 	}
 	for i, v := range somePtr.Ages {
 		if checker.Ages[i] != v {
+			t.FailNow()
+		}
+	}
+	for i, v := range somePtr.Ages2 {
+		if checker.Ages2[i] != v {
 			t.FailNow()
 		}
 	}
@@ -2541,6 +2550,201 @@ func TestInterfaceNil(t *testing.T) {
 	}
 }
 
+func TestPtrSliceNilCaseInMap(t *testing.T) {
+	var someinterface map[string]*[]int = map[string]*[]int{
+		"a": nil,
+		"b": &[]int{0, 1, 2, 3},
+	}
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker map[string]*[]int
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 map[string]*[]int
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2["a"] != nil {
+		t.FailNow()
+	}
+	for k, v := range *checker["b"] {
+		if (*someinterface2["b"])[k] != v {
+			t.FailNow()
+		}
+	}
+}
+func TestPtrMapNilCaseInMap(t *testing.T) {
+	var someinterface map[string]*map[int]int = map[string]*map[int]int{
+		"a": nil,
+		"b": &map[int]int{0: 0, 1: 1, 2: 2, 3: 3},
+	}
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker map[string]*map[int]int
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 map[string]*map[int]int
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2["a"] != nil {
+		t.FailNow()
+	}
+	for k, v := range *checker["b"] {
+		if (*someinterface2["b"])[k] != v {
+			t.FailNow()
+		}
+	}
+}
+func TestPtrSliceNilCaseInSlice(t *testing.T) {
+	var someinterface []*[]int = []*[]int{
+		nil,
+		&[]int{0, 1, 2, 3},
+	}
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker []*[]int
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 []*[]int
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2[0] != nil {
+		t.FailNow()
+	}
+	for k, v := range *checker[1] {
+		if (*someinterface2[1])[k] != v {
+			t.FailNow()
+		}
+	}
+}
+
+func TestSliceOfPtrToCollections(t *testing.T) {
+	type someStruct struct {
+		Number int
+	}
+	var someinterface []*[]someStruct = []*[]someStruct{
+		nil,
+		&[]someStruct{{1}, {2}},
+	}
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker []*[]someStruct
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 []*[]someStruct
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2[0] != nil {
+		t.FailNow()
+	}
+	for k, v := range *checker[1] {
+		if (*someinterface2[1])[k].Number != v.Number {
+			t.FailNow()
+		}
+	}
+}
+
+func TestInterfaceNilOnMapInterface(t *testing.T) {
+	var someinterface map[string]interface{} = map[string]interface{}{
+		"a": nil,
+		"b": &[]int{0, 1, 2, 3},
+	}
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker map[string]*[]int
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 map[string]*[]int
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2["a"] != nil {
+		t.FailNow()
+	}
+	for k, v := range *checker["b"] {
+		if (*someinterface2["b"])[k] != v {
+			t.FailNow()
+		}
+	}
+}
 func TestEmptyString(t *testing.T) {
 	var someinterface string
 	data, err := json.Marshal(someinterface)
@@ -2882,7 +3086,8 @@ func TestVariable(t *testing.T) {
 		"hello5":${myvariable5},
 		"hello6":${myvariable6},
 		"hello7":"hey man: ${myvariable7}",
-		"hello8":"hey man! ${myvariable8}"
+		"hello8":"hey man! ${myvariable8}",
+		"${myvariable9}":${myvariable9}
 		}`
 	var variables map[string]interface{} = map[string]interface{}{
 		"myvariable1": 1,
@@ -2893,6 +3098,7 @@ func TestVariable(t *testing.T) {
 		"myvariable6": map[string]interface{}{"happy": "Cat"},
 		"myvariable7": "whats up!",
 		"myvariable8": "",
+		"myvariable9": "hello9",
 	}
 
 	sm := tokenizer.NewTokenizerStateMachine()
@@ -2935,6 +3141,9 @@ func TestVariable(t *testing.T) {
 		t.FailNow()
 	}
 	if someReceiver2["hello8"] != "hey man! " {
+		t.FailNow()
+	}
+	if someReceiver2["hello9"] != "hello9" {
 		t.FailNow()
 	}
 }
