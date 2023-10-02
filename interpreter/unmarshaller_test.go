@@ -2516,6 +2516,31 @@ func TestEmptyArray(t *testing.T) {
 	}
 }
 
+func TestInterfaceNil(t *testing.T) {
+	var someinterface interface{}
+	data, err := json.Marshal(someinterface)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err = sm.ProcessData(strings.NewReader(string(data)))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var someinterface2 interface{}
+	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if someinterface2 != nil {
+		t.FailNow()
+	}
+}
+
 func TestFinalExam(t *testing.T) {
 
 	type SomeStruct1 struct {
@@ -2526,7 +2551,7 @@ func TestFinalExam(t *testing.T) {
 		Name5  []Bro                  //checked
 		Name6  []*Bro                 //checked
 		Name7  Bro                    //checked
-		Name8  *Bro                   //checked
+		Name8  *Bro                   //checked not fill in, let it nil
 		Name9  map[string]interface{} //checked
 		Name10 map[int]Bro            //checked
 		Name11 [3]int                 //checked
@@ -2554,9 +2579,10 @@ func TestFinalExam(t *testing.T) {
 		Name9: map[string]interface{}{
 			"First":  1,
 			"Second": true,
-			"Thrid":  3.2,
+			"Third":  3.2,
 			"Fourth": Bro{Name: "Ann3", Age: 312},
 			"Fifth":  &Bro{Name: "Ann2", Age: 421},
+			"Sixth":  nil,
 		},
 		Name10: map[int]Bro{
 			11: Bro{Name: "Ann311", Age: 3112},
@@ -2610,4 +2636,139 @@ func TestFinalExam(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
+	if checker.Name1 != someReceiver2.Name1 {
+		t.FailNow()
+	}
+	for i, v := range checker.Name2 {
+		if someReceiver2.Name2[i] != v {
+			t.FailNow()
+		}
+	}
+	for k, v := range checker.Name3 {
+		if someReceiver2.Name3[k] != v {
+			t.FailNow()
+		}
+	}
+	//[]interface{}{1, false, 1.23, nil, []int{2, 3, 4}, map[string]int{"world": 223}},
+	for i := 0; i < 4; i++ {
+		if someReceiver2.Name4[i] != checker.Name4[i] {
+			t.FailNow()
+		}
+	}
+	for i, v := range someReceiver2.Name4[4].([]interface{}) {
+		if checker.Name4[4].([]interface{})[i] != v {
+			t.FailNow()
+		}
+	}
+	for i, v := range someReceiver2.Name4[5].(map[string]interface{}) {
+		if checker.Name4[5].(map[string]interface{})[i] != v {
+			t.FailNow()
+		}
+	}
+	for i, v := range checker.Name5 {
+		myItem := someReceiver2.Name5[i]
+		if v.Name != myItem.Name {
+			t.FailNow()
+		}
+		if v.Age != myItem.Age {
+			t.FailNow()
+		}
+	}
+	for i, v := range checker.Name6 {
+		myItem := someReceiver2.Name6[i]
+		if v.Name != myItem.Name {
+			t.FailNow()
+		}
+		if v.Age != myItem.Age {
+			t.FailNow()
+		}
+	}
+	if checker.Name7.Name != someReceiver2.Name7.Name {
+		t.FailNow()
+	}
+	if checker.Name7.Age != someReceiver2.Name7.Age {
+		t.FailNow()
+	}
+	if someReceiver2.Name8 != nil && checker.Name8 != someReceiver2.Name8 {
+		t.FailNow()
+	}
+
+	if checker.Name9["First"] != someReceiver2.Name9["First"] {
+		t.FailNow()
+	}
+	if checker.Name9["Second"] != someReceiver2.Name9["Second"] {
+		t.FailNow()
+	}
+	if checker.Name9["Third"] != someReceiver2.Name9["Third"] {
+		t.FailNow()
+	}
+	if checker.Name9["Sixth"] != someReceiver2.Name9["Sixth"] && someReceiver2.Name9["Sixth"] != nil {
+		t.FailNow()
+	}
+	if checker.Name9["Fourth"].(map[string]interface{})["Name"] != someReceiver2.Name9["Fourth"].(map[string]interface{})["Name"] {
+		t.FailNow()
+	}
+	if checker.Name9["Fourth"].(map[string]interface{})["Age"] != someReceiver2.Name9["Fourth"].(map[string]interface{})["Age"] {
+		t.FailNow()
+	}
+	if checker.Name9["Fifth"].(map[string]interface{})["Name"] != someReceiver2.Name9["Fifth"].(map[string]interface{})["Name"] {
+		t.FailNow()
+	}
+	if checker.Name9["Fifth"].(map[string]interface{})["Age"] != someReceiver2.Name9["Fifth"].(map[string]interface{})["Age"] {
+		t.FailNow()
+	}
+	if checker.Name10[11].Name != someReceiver2.Name10[11].Name {
+		t.FailNow()
+	}
+	if checker.Name10[11].Age != someReceiver2.Name10[11].Age {
+		t.FailNow()
+	}
+	if checker.Name10[12].Name != someReceiver2.Name10[12].Name {
+		t.FailNow()
+	}
+	if checker.Name10[11].Age != someReceiver2.Name10[11].Age {
+		t.FailNow()
+	}
+	for i, v := range checker.Name11 {
+		if someReceiver2.Name11[i] != v {
+			t.FailNow()
+		}
+	}
+	for i, v := range checker.Name14 {
+		m2 := someReceiver2.Name14[i]
+		for k1, v1 := range v {
+			arr2 := m2[k1]
+			for j, e := range v1 {
+				if reflect.TypeOf(e).Kind() != reflect.Array && reflect.TypeOf(e).Kind() != reflect.Slice {
+					if arr2[j] != e {
+						t.FailNow()
+					}
+				} else {
+					for m, n := range e.([]interface{}) {
+						if arr2[j].([]interface{})[m] != n {
+							t.FailNow()
+						}
+					}
+				}
+
+			}
+		}
+	}
+
+	if checker.Name15.(map[string]interface{})["Field"] != someReceiver2.Name15.(map[string]interface{})["Field"] {
+		t.FailNow()
+	}
+	if checker.Name16 != someReceiver2.Name16 && someReceiver2.Name16 != nil {
+		t.FailNow()
+	}
+	if len(checker.Name17) != len(someReceiver2.Name17) && len(someReceiver2.Name17) != 0 {
+		t.FailNow()
+	}
+	if len(checker.Name18) != len(someReceiver2.Name18) && len(someReceiver2.Name18) != 0 {
+		t.FailNow()
+	}
+	if checker.Name19 != someReceiver2.Name19 && someReceiver2.Name19 != 123 {
+		t.FailNow()
+	}
+
 }

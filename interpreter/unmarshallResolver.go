@@ -22,6 +22,7 @@ type unmarshallResolver struct {
 	numberOfPointer      int
 	awaitingResolve      bool
 	isPointerValue       bool
+	IsNil                bool // when our ptrToActualValue holds a struct, there's no way to tell if we are accepting a nil for it.
 	objectKey            string
 	parent               *unmarshallResolver
 	ptrToActualValue     reflect.Value // single ptr to no matter what actual value is (for *****int, keeps only *int to the actual value)
@@ -31,7 +32,7 @@ type unmarshallResolver struct {
 // therefore below is a if check to set the value to `zero` rather than `nilValue of some type`
 func (resolver *unmarshallResolver) resolveSliceDependency(dependentResolver *unmarshallResolver) error {
 	dependentValue := dependentResolver.restoreValue()
-	if dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
+	if dependentResolver.IsNil || dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
 		dependentValue.Elem().Kind() == reflect.Interface ||
 		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
 		resolver.ptrToActualValue.Elem().Index(dependentResolver.arrayIndex).SetZero()
@@ -47,7 +48,7 @@ func (resolver *unmarshallResolver) resolveStructDependency(dependentResolver *u
 	}
 
 	dependentValue := dependentResolver.restoreValue()
-	if dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
+	if dependentResolver.IsNil || dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
 		dependentValue.Elem().Kind() == reflect.Interface ||
 		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
 		field.SetZero()
@@ -82,19 +83,11 @@ func (resolver *unmarshallResolver) resolveInterfaceDependency(dependentResolver
 	} else {
 		if len(dependentResolver.objectKey) > 0 { // interface holding map
 			return resolver.resolveMapDependency(dependentResolver)
-		} else { // in any case, we cannot tell what the real thing is within the interface, set it in
-			dependentValue := dependentResolver.restoreValue()
-			if dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
-				dependentValue.Elem().Kind() == reflect.Interface ||
-				dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
-				resolver.ptrToActualValue.Elem().SetZero()
-			} else {
-				resolver.ptrToActualValue.Elem().Set(dependentValue.Convert(resolver.ptrToActualValue.Elem().Type()))
-			}
+		} else { // we need array index or key to resolve the location of the dependent Value
+			return ErrorInternalDependentResolverHasOnResolveLocation
 		}
 	}
 
-	return nil
 }
 func (resolver *unmarshallResolver) resolveDependency(dependentResolver *unmarshallResolver) error {
 	resolver.awaitingResolveCount -= 1
@@ -306,6 +299,7 @@ func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) 
 
 func (resolver *unmarshallResolver) VisitNullNode(node *ast.JsonNullNode) error {
 	resolver.setValue(node.Value)
+	resolver.IsNil = true
 	return resolver.resolve()
 }
 
