@@ -16,6 +16,7 @@ const (
 	FieldTypeNotMatchAST               = "field type %s is not of ast collection node type"
 	KVKindNotMatch                     = "expect %s as key but value is not :%#v"
 	FieldNotValid                      = "field not valid %s"
+	FieldNotFound                      = "field with tag %s not found"
 )
 
 var (
@@ -83,4 +84,8 @@ func NewErrorInternalMapKeyValueKindNotMatch(kind string, value interface{}) err
 
 func NewErrorFieldNotValid(field string) error {
 	return fmt.Errorf(FieldNotValid, field)
+}
+
+func NewErrorFieldNotFound(field string) error {
+	return fmt.Errorf(FieldNotFound, field)
 }

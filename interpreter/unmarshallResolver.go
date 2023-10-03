@@ -40,9 +40,9 @@ func (resolver *unmarshallResolver) resolveSliceDependency(dependentResolver *un
 	return nil
 }
 func (resolver *unmarshallResolver) resolveStructDependency(dependentResolver *unmarshallResolver) error {
-	field := resolver.ptrToActualValue.Elem().FieldByName(dependentResolver.objectKey)
-	if !field.IsValid() || !field.CanSet() {
-		return NewErrFieldCannotSetOrNotfound(dependentResolver.objectKey)
+	field, err := resolver.getFieldByTag(resolver.ptrToActualValue.Elem(), dependentResolver.objectKey)
+	if err != nil {
+		return err
 	}
 
 	dependentValue := dependentResolver.restoreValue()

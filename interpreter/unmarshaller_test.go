@@ -1,6 +1,7 @@
 package interpreter_test
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -3146,4 +3147,42 @@ func TestVariable(t *testing.T) {
 	if someReceiver2["hello9"] != "hello9" {
 		t.FailNow()
 	}
+}
+
+func TestFieldByTag(t *testing.T) {
+	type mydata struct {
+		Name1   string `json:"name"`
+		Name2   int    `json:"age"`
+		Address string
+	}
+
+	test1 := mydata{"Ann", 198, "CA Redwood shore"}
+	data, _ := json.Marshal(test1)
+
+	var checker mydata
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachine()
+	err := sm.ProcessData(bytes.NewReader(data))
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTConstructor().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Name1 != "Ann" {
+		t.FailNow()
+	}
+	if myReceiver.Name2 != 198 {
+		t.FailNow()
+	}
+	if myReceiver.Address != "CA Redwood shore" {
+		t.FailNow()
+	}
+
 }

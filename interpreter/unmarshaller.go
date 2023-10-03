@@ -22,6 +22,22 @@ func (resolver *unmarshallResolver) processKVKeyNode(node ast.JsonStringValueNod
 	return key, nil
 }
 
+func (resolver *unmarshallResolver) getFieldByTag(obj reflect.Value, objKey string) (reflect.Value, error) {
+
+	for i := 0; i < obj.NumField(); i++ {
+		field := obj.Type().Field(i)
+		if fieldTag := field.Tag.Get("json"); fieldTag == objKey {
+			return obj.Field(i), nil
+		}
+	}
+	// fall back to field by name
+	fieldInfo := obj.FieldByName(objKey)
+	if !fieldInfo.IsValid() || !fieldInfo.CanSet() {
+		return reflect.Value{}, NewErrorFieldNotValid(objKey)
+	}
+	return fieldInfo, nil
+}
+
 // create resolver to resolving the things in kv's value
 func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast.JsonNode) (*unmarshallResolver, error) {
 	// create child resolver by data type
@@ -34,9 +50,9 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 
 	} else if childElementType.Kind() == reflect.Struct {
 
-		fieldInfo := resolver.ptrToActualValue.Elem().FieldByName(key) // struct field
-		if !fieldInfo.IsValid() || !fieldInfo.CanSet() {
-			return nil, NewErrorFieldNotValid(key)
+		fieldInfo, err := resolver.getFieldByTag(resolver.ptrToActualValue.Elem(), key) // struct field
+		if err != nil {
+			return nil, err
 		}
 		childElementType = fieldInfo.Type()
 
