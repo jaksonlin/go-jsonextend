@@ -15,8 +15,7 @@ type TokenProvider interface {
 }
 
 type ASTManager interface {
-	RecordSyntaxSymbol(b token.TokenType) error
-	RecordSyntaxValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error
+	RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error
 	GetAST() ast.JsonNode
 	HasComplete() bool
 	TopElementType() (ast.AST_NODETYPE, error)

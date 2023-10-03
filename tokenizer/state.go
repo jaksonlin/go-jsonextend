@@ -59,5 +59,5 @@ func (i *PrimitiveValueTokenStateBase) switchState() error {
 
 // it will also handle the store of the value to update the AST
 func (i *PrimitiveValueTokenStateBase) storeTokenValue(mode StateMode, value interface{}) error {
-	return i.stateMachine.RecordSyntaxValue(mode, value)
+	return i.stateMachine.RecordStateValue(mode, value)
 }

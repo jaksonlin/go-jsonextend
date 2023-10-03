@@ -1,5 +1,7 @@
 package token
 
+import "reflect"
+
 type TokenType uint
 
 const (
@@ -32,12 +34,40 @@ const (
 	TOKEN_NUMBER_DECIMAL
 	//
 	TOKEN_DOUBLE_QUOTATION
-	TOKEN_DUMMY = 98
-	TOKEN_DROP  = 99
+
+	TOKEN_UNKNOWN TokenType = 97
+	TOKEN_DUMMY   TokenType = 98
+	TOKEN_DROP    TokenType = 99
 )
 
 // symbol token of json, these are the format token that need to use to construct the AST/ syntax checker
 // double quotaion though is also symbol, it is value symbol, not json protocol symbol to hold the format
 func IsSymbolToken(t TokenType) bool {
 	return t == TOKEN_COMMA || t == TOKEN_COLON || t == TOKEN_LEFT_BRACE || t == TOKEN_LEFT_BRACKET || t == TOKEN_RIGHT_BRACE || t == TOKEN_RIGHT_BRACKET
+}
+
+func GetTokenTypeByReflection(v *reflect.Value) TokenType {
+	rv := *v
+	for rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return TOKEN_NULL
+		}
+		rv = rv.Elem()
+	}
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64:
+		return TOKEN_NUMBER
+	case reflect.String:
+		return TOKEN_STRING
+	case reflect.Bool:
+		return TOKEN_BOOLEAN
+	case reflect.Slice, reflect.Array:
+		return TOKEN_LEFT_BRACKET
+	case reflect.Struct, reflect.Map:
+		return TOKEN_LEFT_BRACE
+	default:
+		return TOKEN_UNKNOWN
+	}
 }

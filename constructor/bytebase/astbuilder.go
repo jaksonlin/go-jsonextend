@@ -22,6 +22,7 @@ func NewASTByteBaseBuilder(reader io.Reader) *ASTByteBaseBuilder {
 
 var _ constructor.ASTBuilder = &ASTByteBaseBuilder{}
 
+// put the store to syntax symbol here, to decouple the relation of reader and writer
 func (t *ASTByteBaseBuilder) GetNextTokenType() (token.TokenType, error) {
 
 	nextTokenType, err := t.provider.GetNextTokenType()
@@ -62,8 +63,8 @@ func (t *ASTByteBaseBuilder) RecordSyntaxSymbol(b token.TokenType) error {
 	return t.astConstructor.RecordSyntaxSymbol(b)
 }
 
-func (t *ASTByteBaseBuilder) RecordSyntaxValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
-	return t.astConstructor.RecordSyntaxValue(valueType, nodeValue)
+func (t *ASTByteBaseBuilder) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
+	return t.astConstructor.RecordStateValue(valueType, nodeValue)
 }
 func (i *ASTByteBaseBuilder) GetAST() ast.JsonNode {
 	return i.astConstructor.GetAST()

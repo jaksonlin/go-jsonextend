@@ -35,21 +35,21 @@ func (i *TokenizerStateMachine) SwitchStateByToken(tokenType token.TokenType) er
 	return nil
 }
 
-func (i *TokenizerStateMachine) RecordSyntaxValue(valueType StateMode, nodeValue interface{}) error {
+func (i *TokenizerStateMachine) RecordStateValue(valueType StateMode, nodeValue interface{}) error {
 	// keeps a matching between the state mode and the ast node type, may change in the future
 	switch valueType {
 	case STRING_MODE:
-		return i.astBuilder.RecordSyntaxValue(ast.AST_STRING, nodeValue)
+		return i.astBuilder.RecordStateValue(ast.AST_STRING, nodeValue)
 	case BOOLEAN_MODE:
-		return i.astBuilder.RecordSyntaxValue(ast.AST_BOOLEAN, nodeValue)
+		return i.astBuilder.RecordStateValue(ast.AST_BOOLEAN, nodeValue)
 	case NUMBER_MODE:
-		return i.astBuilder.RecordSyntaxValue(ast.AST_NUMBER, nodeValue)
+		return i.astBuilder.RecordStateValue(ast.AST_NUMBER, nodeValue)
 	case NULL_MODE:
-		return i.astBuilder.RecordSyntaxValue(ast.AST_NULL, nodeValue)
+		return i.astBuilder.RecordStateValue(ast.AST_NULL, nodeValue)
 	case VARIABLE_MODE:
-		return i.astBuilder.RecordSyntaxValue(ast.AST_VARIABLE, nodeValue)
+		return i.astBuilder.RecordStateValue(ast.AST_VARIABLE, nodeValue)
 	case STRING_VARIABLE_MODE:
-		return i.astBuilder.RecordSyntaxValue(ast.AST_STRING_VARIABLE, nodeValue)
+		return i.astBuilder.RecordStateValue(ast.AST_STRING_VARIABLE, nodeValue)
 	default:
 		return ErrorIncorrectValueTypeForConstructAST
 	}

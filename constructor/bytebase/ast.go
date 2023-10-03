@@ -62,7 +62,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 	return nil
 }
 
-func (i *astByteBaseConstructor) RecordSyntaxValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
+func (i *astByteBaseConstructor) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
 	i.syntaxChecker.PushValue(valueType)
 	return i.ast.CreateNewASTNode(valueType, nodeValue)
 }
