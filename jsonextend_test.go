@@ -113,3 +113,38 @@ func TestUnmarshal2(t *testing.T) {
 		}
 	}
 }
+
+func TestUnmarshal3(t *testing.T) {
+	dataTemplate := `[1,true,"hello", null, ${var1}, ${var2}]`
+	var someItemSlice []interface{}
+
+	variables := map[string]interface{}{
+		"var1": []int{1, 2, 3},
+		"var2": map[string]interface{}{"baby": "shark"},
+	}
+
+	err := jsonextend.Unmarshal(strings.NewReader(dataTemplate), variables, &someItemSlice)
+	if err != nil {
+		t.FailNow()
+	}
+	if someItemSlice[0] != 1.0 {
+		t.FailNow()
+	}
+	if someItemSlice[1] != true {
+		t.FailNow()
+	}
+	if someItemSlice[2] != "hello" {
+		t.FailNow()
+	}
+	if someItemSlice[3] != nil {
+		t.FailNow()
+	}
+	for i, v := range someItemSlice[4].([]int) {
+		if v != i+1 {
+			t.FailNow()
+		}
+	}
+	if someItemSlice[5].(map[string]interface{})["baby"] != "shark" {
+		t.FailNow()
+	}
+}

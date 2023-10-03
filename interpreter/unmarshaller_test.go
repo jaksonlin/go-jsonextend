@@ -3088,7 +3088,8 @@ func TestVariable(t *testing.T) {
 		"hello6":${myvariable6},
 		"hello7":"hey man: ${myvariable7}",
 		"hello8":"hey man! ${myvariable8}",
-		"${myvariable9}":${myvariable9}
+		"${myvariable9}":${myvariable9},
+		"hello10":"${myvariable10}"
 		}`
 	var variables map[string]interface{} = map[string]interface{}{
 		"myvariable1": 1,
@@ -3145,6 +3146,9 @@ func TestVariable(t *testing.T) {
 		t.FailNow()
 	}
 	if someReceiver2["hello9"] != "hello9" {
+		t.FailNow()
+	}
+	if someReceiver2["hello10"] != "${myvariable10}" {
 		t.FailNow()
 	}
 }
