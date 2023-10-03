@@ -34,13 +34,13 @@ func main() {
 
 ```
 
-as a json unmarshaller, (tag support will be added in the future)
+as a json unmarshaller
 
 ```go
 
 type SomeStruct struct {
-    Field1 string
-    Field2 bool
+    Field1 string `json:"field1"`
+    Field2 bool   `json:"field2"`
     Field3 int
     Field4 interface{}
 }
