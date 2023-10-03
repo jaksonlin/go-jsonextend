@@ -1,6 +1,7 @@
-package ast
+package bytebase
 
 import (
+	"github.com/jaksonlin/go-jsonextend/ast"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -21,7 +22,7 @@ func (s *syntaxChecker) PushSymbol(b byte) {
 	s.length += 1
 }
 
-func (s *syntaxChecker) PushValue(val AST_NODETYPE) {
+func (s *syntaxChecker) PushValue(val ast.AST_NODETYPE) {
 	s.syntaxState.Push(byte(val))
 	s.length += 1
 }
@@ -36,7 +37,7 @@ func (s *syntaxChecker) Enclose(b byte) error {
 	if err == util.ErrorEndOfStack {
 		return ErrorSyntaxEmptyStack
 	}
-	if t > AST_NODE_TYPE_BOUNDARY {
+	if t > ast.AST_NODE_TYPE_BOUNDARY.Byte() {
 		return ErrorSyntaxEncloseIncorrectSymbol
 	}
 	if t != b {
@@ -65,18 +66,18 @@ func (s *syntaxChecker) jsonArrayFormatCheck() error {
 				return ErrorSyntaxCommaBehindLastItem
 			}
 			// mark that here is an array in the syntax checker
-			s.syntaxState.Push(AST_ARRAY)
+			s.syntaxState.Push(ast.AST_ARRAY.Byte())
 			return nil
 		}
 		if expectingValue { // ascii symbol
-			if t < AST_NODE_TYPE_BOUNDARY {
+			if t < ast.AST_NODE_TYPE_BOUNDARY.Byte() {
 				return ErrorSyntaxElementNotSeparatedByComma
 			} else {
 				lastIsValue = true
 				hasEncounterValue = true
 			}
 		} else if !expectingValue {
-			if t > AST_NODE_TYPE_BOUNDARY {
+			if t > ast.AST_NODE_TYPE_BOUNDARY.Byte() {
 				return ErrorSyntaxElementNotSeparatedByComma
 			}
 			if t != 0x2C {
@@ -107,24 +108,24 @@ func (s *syntaxChecker) jsonObjectCheck() error {
 			// enclose the object as a value in the syntax checker, this will save our hands in handling }} or ]} in the syntax checker
 			// this will collapse the checking of symbol into: always having symbol in between the value (braces and brakcets are collpased into value)
 			// in our design, the array and object will be collapse into syntax_value, []{}
-			s.syntaxState.Push(AST_OBJECT)
+			s.syntaxState.Push(ast.AST_OBJECT.Byte())
 			return nil
 		}
 		if expectingValue {
 			// expecting value but find symbol
-			if t < AST_NODE_TYPE_BOUNDARY {
+			if t < ast.AST_NODE_TYPE_BOUNDARY.Byte() {
 				return ErrorSyntaxElementNotSeparatedByComma
 			} else {
 				// the json key's previous symbol is either `{` or `,`, that means in the stack's next pop, if it is a ',' then this AST_STRING_vARIABLE is a json-key
 				// which is invalid, because people may put arbitrary variable as key which may break the json format
-				if t == AST_VARIABLE && expectingSymbol == ',' {
+				if t == ast.AST_VARIABLE.Byte() && expectingSymbol == ',' {
 					return ErrorSyntaxExtendedSyntaxVariableAsKey
 				}
 				lastIsValue = true
 				hasEncounterValue = true
 			}
 		} else if !expectingValue {
-			if t > AST_NODE_TYPE_BOUNDARY {
+			if t > ast.AST_NODE_TYPE_BOUNDARY.Byte() {
 				return ErrorSyntaxElementNotSeparatedByComma
 			}
 			if t != expectingSymbol {

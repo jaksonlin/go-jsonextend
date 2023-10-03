@@ -9,27 +9,27 @@ import (
 )
 
 func Parse(reader io.Reader, variables map[string]interface{}) (string, error) {
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(reader)
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
+	err := sm.ProcessData()
 	if err != nil {
 		return "", err
 	}
-	if sm.GetASTConstructor().HasOpenElements() {
+	if sm.GetASTBuilder().HasOpenElements() {
 		return "", errors.New("invalid json")
 	}
-	ast := sm.GetASTConstructor().GetAST()
+	ast := sm.GetAST()
 	return interpreter.Interpret(ast, variables)
 }
 
 func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}) error {
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(reader)
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
+	err := sm.ProcessData()
 	if err != nil {
 		return err
 	}
-	if sm.GetASTConstructor().HasOpenElements() {
+	if sm.GetASTBuilder().HasOpenElements() {
 		return errors.New("invalid json")
 	}
-	ast := sm.GetASTConstructor().GetAST()
+	ast := sm.GetAST()
 	return interpreter.UnmarshallAST(ast, variables, out)
 }

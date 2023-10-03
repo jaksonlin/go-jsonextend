@@ -99,18 +99,18 @@ func TestInterpreter(t *testing.T) {
 
 	}`
 	reader := strings.NewReader(sampleJson)
-	sm := tokenizer.NewTokenizerStateMachine()
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
 
-	err := sm.ProcessData(reader)
+	err := sm.ProcessData()
 
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	if sm.GetASTConstructor().HasOpenElements() {
+	if sm.GetASTBuilder().HasOpenElements() {
 		t.FailNow()
 	}
-	a := sm.GetASTConstructor().GetAST()
+	a := sm.GetAST()
 
 	variableConfig := make(map[string]interface{})
 	variableConfig["someVar2"] = 123

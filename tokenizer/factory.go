@@ -1,8 +1,22 @@
 package tokenizer
 
-func NewTokenizerStateMachine() JzoneTokenizerStateMachine {
+import (
+	"io"
+
+	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/constructor/bytebase"
+	"github.com/jaksonlin/go-jsonextend/token"
+)
+
+func NewTokenizerStateMachineFromIOReader(reader io.Reader) *TokenizerStateMachine {
+	astMan := bytebase.NewASTByteBaseBuilder(reader)
+	return newTokenizerStateMachine(astMan)
+}
+
+func newTokenizerStateMachine(builder constructor.ASTBuilder) *TokenizerStateMachine {
 
 	sm := TokenizerStateMachine{}
+	sm.astBuilder = builder
 	sm.initState = &InitState{NewTokenReader(&sm)}
 	sm.arrayState = &ArrayState{NewTokenReader(&sm)}
 	sm.objectState = &ObjectState{NewTokenReader(&sm)}
@@ -12,37 +26,37 @@ func NewTokenizerStateMachine() JzoneTokenizerStateMachine {
 	sm.nullState = &NullState{NewPrimitiveValueTokenStateBase(&sm)}
 	sm.variableState = &VariableState{NewPrimitiveValueTokenStateBase(&sm)}
 	//construct a route table instead of using switch every where.
-	sm.defaultRoute = map[TokenType]stateChangeFunc{
+	sm.defaultRoute = map[token.TokenType]stateChangeFunc{
 
-		TOKEN_STRING: func() error {
+		token.TOKEN_STRING: func() error {
 			sm.currentState = sm.stringState
 			return nil
 		},
-		TOKEN_NUMBER: func() error {
+		token.TOKEN_NUMBER: func() error {
 			sm.currentState = sm.numberState
 			return nil
 		},
-		TOKEN_BOOLEAN: func() error {
+		token.TOKEN_BOOLEAN: func() error {
 			sm.currentState = sm.booleanState
 			return nil
 		},
-		TOKEN_NULL: func() error {
+		token.TOKEN_NULL: func() error {
 			sm.currentState = sm.nullState
 			return nil
 		},
-		TOKEN_LEFT_BRACKET: func() error {
+		token.TOKEN_LEFT_BRACKET: func() error {
 			sm.currentState = sm.arrayState
 			return nil
 		},
-		TOKEN_LEFT_BRACE: func() error {
+		token.TOKEN_LEFT_BRACE: func() error {
 			sm.currentState = sm.objectState
 			return nil
 		},
-		TOKEN_VARIABLE: func() error {
+		token.TOKEN_VARIABLE: func() error {
 			sm.currentState = sm.variableState
 			return nil
 		},
 	}
-	sm.Reset()
+	sm.currentState = sm.initState
 	return &sm
 }

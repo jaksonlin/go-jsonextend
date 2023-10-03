@@ -76,17 +76,17 @@ func BenchmarkMyJsonE(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		reader := strings.NewReader(sampleJson)
-		sm := tokenizer.NewTokenizerStateMachine()
+		sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
 
 		b.StartTimer()
-		err := sm.ProcessData(reader)
+		err := sm.ProcessData()
 		b.StopTimer()
 
 		if err != nil {
 			b.Error(err) // use b.Error to continue with other benchmarks
 		}
 
-		if sm.GetASTConstructor().HasOpenElements() {
+		if sm.GetASTBuilder().HasOpenElements() {
 			b.Error("Open element found")
 		}
 	}
@@ -105,14 +105,14 @@ func TestMyJson1(t *testing.T) {
 
 	reader := strings.NewReader(sampleJson)
 
-	sm := tokenizer.NewTokenizerStateMachine()
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
 
-	err := sm.ProcessData(reader)
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	if sm.GetASTConstructor().HasOpenElements() {
+	if sm.GetASTBuilder().HasOpenElements() {
 		t.FailNow()
 	}
 

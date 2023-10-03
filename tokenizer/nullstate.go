@@ -1,32 +1,25 @@
 package tokenizer
 
 import (
-	"bufio"
-	"io"
+	"github.com/jaksonlin/go-jsonextend/constructor"
 )
 
 type NullState struct {
 	PrimitiveValueTokenStateBase
 }
 
-var _ JzonePrimitiveTokenizer = &NullState{}
+var _ PrimitiveValueTokenizer = &NullState{}
 
 func (i *NullState) GetMode() StateMode {
 	return NULL_MODE
 }
 
-func (i *NullState) ProcessData(dataSource *bufio.Reader) error {
-	rs := make([]byte, 4)
-	_, err := io.ReadFull(dataSource, rs)
+func (i *NullState) ProcessData(provider constructor.TokenProvider) error {
+	err := provider.ReadNull()
 	if err != nil {
 		return err
 	}
-
-	if string(rs) != "null" {
-		return ErrorIncorrectValueForState
-	}
-
-	err = i.storeTokenValue(i.GetMode(), "null")
+	err = i.storeTokenValue(i.GetMode(), nil)
 	if err != nil {
 		return err
 	}

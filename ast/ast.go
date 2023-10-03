@@ -27,25 +27,25 @@ const (
 	AST_STATE_FINISHED
 )
 
-type jzoneAST struct {
+type JsonextAST struct {
 	ast      JsonNode
 	astTrace *util.Stack[JsonNode]
 	state    astState
 }
 
-func newJzoneAST() *jzoneAST {
-	return &jzoneAST{
+func NewJsonextAST() *JsonextAST {
+	return &JsonextAST{
 		ast:      nil,
 		astTrace: util.NewStack[JsonNode](),
 		state:    AST_STATE_INIT,
 	}
 }
 
-func (i *jzoneAST) GetAST() JsonNode {
+func (i *JsonextAST) GetAST() JsonNode {
 	return i.ast
 }
 
-func (i *jzoneAST) createRootNode(t AST_NODETYPE, value interface{}) error {
+func (i *JsonextAST) CreateRootNode(t AST_NODETYPE, value interface{}) error {
 	n, err := nodeFactory(t, value)
 	if err != nil {
 		return err
@@ -61,12 +61,12 @@ func (i *jzoneAST) createRootNode(t AST_NODETYPE, value interface{}) error {
 	return nil
 }
 
-func (i *jzoneAST) CreateNewASTNode(t AST_NODETYPE, value interface{}) error {
+func (i *JsonextAST) CreateNewASTNode(t AST_NODETYPE, value interface{}) error {
 	if i.state == AST_STATE_FINISHED {
 		return ErrorASTComplete
 	}
 	if i.ast == nil {
-		return i.createRootNode(t, value)
+		return i.CreateRootNode(t, value)
 	}
 	latest, err := i.astTrace.Peek()
 	if err != nil {
@@ -75,18 +75,18 @@ func (i *jzoneAST) CreateNewASTNode(t AST_NODETYPE, value interface{}) error {
 
 	switch realNode := latest.(type) {
 	case *JsonArrayNode:
-		return i.createNewNodeForArrayObject(realNode, t, value)
+		return i.CreateNewNodeForArrayObject(realNode, t, value)
 	case *JsonObjectNode:
-		return i.createNewNodeForObject(realNode, t, value)
+		return i.CreateNewNodeForObject(realNode, t, value)
 	case *JsonKeyValuePairNode:
-		return i.createValueNodeForKVPairs(realNode, t, value)
+		return i.CreateValueNodeForKVPairs(realNode, t, value)
 	default:
 		return ErrorASTUnexpectedElement
 	}
 
 }
 
-func (i *jzoneAST) createNewNodeForArrayObject(owner *JsonArrayNode, t AST_NODETYPE, value interface{}) error {
+func (i *JsonextAST) CreateNewNodeForArrayObject(owner *JsonArrayNode, t AST_NODETYPE, value interface{}) error {
 	n, err := nodeFactory(t, value)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func (i *jzoneAST) createNewNodeForArrayObject(owner *JsonArrayNode, t AST_NODET
 	return nil
 }
 
-func (i *jzoneAST) createNewNodeForObject(owner *JsonObjectNode, t AST_NODETYPE, value interface{}) error {
+func (i *JsonextAST) CreateNewNodeForObject(owner *JsonObjectNode, t AST_NODETYPE, value interface{}) error {
 	keyNode, err := nodeFactory(t, value)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (i *jzoneAST) createNewNodeForObject(owner *JsonObjectNode, t AST_NODETYPE,
 	return nil
 }
 
-func (i *jzoneAST) createValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_NODETYPE, value interface{}) error {
+func (i *JsonextAST) CreateValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_NODETYPE, value interface{}) error {
 
 	n, err := nodeFactory(t, value)
 	if err != nil {
@@ -126,7 +126,7 @@ func (i *jzoneAST) createValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_
 	} else {
 		// primivite value, finalize the k-v pair and append to the object node
 		owner.Value = n
-		err = i.finlizeKVPair()
+		err = i.FinlizeKVPair()
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func (i *jzoneAST) createValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_
 	return nil
 }
 
-func (i *jzoneAST) finlizeKVPair() error {
+func (i *JsonextAST) FinlizeKVPair() error {
 	kvElement, err := i.astTrace.Pop() // pop the kv, because it should be finalized to objet now.
 	if err == util.ErrorEndOfStack {
 		return ErrorASTStackEmpty
@@ -153,14 +153,14 @@ func (i *jzoneAST) finlizeKVPair() error {
 	return nil
 }
 
-func (i *jzoneAST) EncloseLatestElements() error {
+func (i *JsonextAST) EncloseLatestElements() error {
 
 	itemToFinalize, err := i.astTrace.Pop()
 	if err == util.ErrorEndOfStack {
 		i.state = AST_STATE_FINISHED
 		return nil
 	}
-	err = i.storeFinlizedItemToOwner(itemToFinalize)
+	err = i.StoreFinlizedItemToOwner(itemToFinalize)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (i *jzoneAST) EncloseLatestElements() error {
 
 }
 
-func (i *jzoneAST) TopElementType() (AST_NODETYPE, error) {
+func (i *JsonextAST) TopElementType() (AST_NODETYPE, error) {
 	t, err := i.astTrace.Peek()
 	if err != nil {
 		return AST_NODE_UNDEFINED, err
@@ -176,7 +176,7 @@ func (i *jzoneAST) TopElementType() (AST_NODETYPE, error) {
 	return t.GetNodeType(), nil
 }
 
-func (i *jzoneAST) storeFinlizedItemToOwner(itemToFinalize JsonNode) error {
+func (i *JsonextAST) StoreFinlizedItemToOwner(itemToFinalize JsonNode) error {
 	nodeType := itemToFinalize.GetNodeType()
 	switch nodeType {
 	case AST_OBJECT: // item can only be value of kv or element of array
@@ -192,7 +192,7 @@ func (i *jzoneAST) storeFinlizedItemToOwner(itemToFinalize JsonNode) error {
 			ownerElement.(*JsonArrayNode).Append(itemToFinalize) // array case, put it in array
 		case AST_KVPAIR: // kv case
 			ownerElement.(*JsonKeyValuePairNode).Value = itemToFinalize
-			err = i.finlizeKVPair()
+			err = i.FinlizeKVPair()
 			if err != nil {
 				return err
 			}
@@ -205,10 +205,10 @@ func (i *jzoneAST) storeFinlizedItemToOwner(itemToFinalize JsonNode) error {
 	return nil
 }
 
-func (i *jzoneAST) HasOpenElement() bool {
+func (i *JsonextAST) HasOpenElement() bool {
 	return i.astTrace.Length() > 0
 }
 
-func (i *jzoneAST) HasComplete() bool {
+func (i *JsonextAST) HasComplete() bool {
 	return i.state == AST_STATE_FINISHED
 }

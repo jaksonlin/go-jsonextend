@@ -1,6 +1,4 @@
-package tokenizer
-
-import "github.com/jaksonlin/go-jsonextend/util"
+package token
 
 type TokenType uint
 
@@ -38,55 +36,8 @@ const (
 	TOKEN_DROP  = 99
 )
 
-// in json k-v start bytes
-func GetTokenTypeByStartCharacter(b byte) TokenType {
-	switch {
-	case util.IsNumberStartingCharacter(b):
-		return TOKEN_NUMBER
-	case b == '"':
-		return TOKEN_STRING
-	case b == 't' || b == 'f':
-		return TOKEN_BOOLEAN
-	case b == 'n':
-		return TOKEN_NULL
-	case b == '$':
-		return TOKEN_VARIABLE
-	case b == '{':
-		return TOKEN_LEFT_BRACE
-	case b == '[':
-		return TOKEN_LEFT_BRACKET
-	case b == '}':
-		return TOKEN_RIGHT_BRACE
-	case b == ']':
-		return TOKEN_RIGHT_BRACKET
-	case b == ':':
-		return TOKEN_COLON
-	case b == ',':
-		return TOKEN_COMMA
-	case util.IsSpaces(b):
-		return TOKEN_SPACE
-	default:
-		return TOKEN_DROP
-	}
-}
-
 // symbol token of json, these are the format token that need to use to construct the AST/ syntax checker
 // double quotaion though is also symbol, it is value symbol, not json protocol symbol to hold the format
 func IsSymbolToken(t TokenType) bool {
 	return t == TOKEN_COMMA || t == TOKEN_COLON || t == TOKEN_LEFT_BRACE || t == TOKEN_LEFT_BRACKET || t == TOKEN_RIGHT_BRACE || t == TOKEN_RIGHT_BRACKET
-}
-
-// these symbols should be unread to buffer, they are read first to determine the state change,
-// not using peek to collect them because there may be a long way to go till we see it.
-func ShouldUnreadByte(t TokenType) bool {
-	switch t {
-	case TOKEN_BOOLEAN:
-	case TOKEN_NUMBER:
-	case TOKEN_STRING:
-	case TOKEN_NULL:
-	case TOKEN_VARIABLE:
-	default: // unread value for value mode
-		return false
-	}
-	return true
 }
