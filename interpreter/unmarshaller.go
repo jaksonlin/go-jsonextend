@@ -27,7 +27,11 @@ func (resolver *unmarshallResolver) getFieldByTag(obj reflect.Value, objKey stri
 	for i := 0; i < obj.NumField(); i++ {
 		field := obj.Type().Field(i)
 		if fieldTag := field.Tag.Get("json"); fieldTag == objKey {
-			return obj.Field(i), nil
+			fieldInfo := obj.Field(i)
+			if !fieldInfo.IsValid() || !fieldInfo.CanSet() {
+				return reflect.Value{}, NewErrorFieldNotValid(objKey)
+			}
+			return fieldInfo, nil
 		}
 	}
 	// fall back to field by name
