@@ -1,6 +1,7 @@
 package interpreter_test
 
 import (
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -435,4 +436,41 @@ func TestInterfaceReceiver(t *testing.T) {
 		t.FailNow()
 	}
 
+}
+func TestNilSlice(t *testing.T) {
+	var var1 *[]string // = &[4]string{"1", "3", "4", "3"}
+	gg, err := json.Marshal(var1)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Print(gg)
+
+}
+
+type Myobj struct {
+	Name string
+}
+
+var _ encoding.TextMarshaler = &Myobj{}
+
+func (o *Myobj) MarshalText() (text []byte, err error) {
+	return []byte(o.Name), nil
+}
+func TestMapKey(t *testing.T) {
+	var var1 map[*Myobj]int = make(map[*Myobj]int)
+	var item *Myobj = &Myobj{"123"}
+	var1[item] = 100
+	gg, err := json.Marshal(var1)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Print(gg)
+
+	var item2 Myobj
+	val := reflect.ValueOf(item2)
+	marshalTextMethod := val.MethodByName("MarshalText")
+	if !marshalTextMethod.IsValid() {
+		fmt.Println("MarshalText method not found!")
+		return
+	}
 }

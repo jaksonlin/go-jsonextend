@@ -10,7 +10,9 @@ import (
 )
 
 type tokenProvider struct {
-	dataSource *bufio.Reader
+	dataSource     *bufio.Reader
+	CurrentOffset  int
+	LastReadLength int // this can give us the correct startoffset of current element
 }
 
 func newTokenProvider(reader io.Reader) *tokenProvider {
@@ -44,6 +46,9 @@ func (t *tokenProvider) ReadBool() (bool, error) {
 		return false, err
 	}
 
+	t.LastReadLength = numberOfRead
+	t.CurrentOffset += t.LastReadLength
+
 	rsBoolean, err := strconv.ParseBool(string(rs))
 	if err != nil {
 		return false, ErrorIncorrectValueForState
@@ -65,6 +70,9 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 		if err != nil {
 			return token.TOKEN_DUMMY, err
 		}
+	} else {
+		t.LastReadLength = 1
+		t.CurrentOffset += t.LastReadLength
 	}
 
 	return nextTokenType, nil
@@ -76,7 +84,8 @@ func (t *tokenProvider) ReadNull() error {
 	if err != nil {
 		return err
 	}
-
+	t.LastReadLength = 4
+	t.CurrentOffset += t.LastReadLength
 	if string(rs) != "null" {
 		return ErrorIncorrectValueForState
 	}
@@ -108,7 +117,8 @@ func (t *tokenProvider) ReadNumber() (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-
+	t.LastReadLength = lengthOfNumber
+	t.CurrentOffset += t.LastReadLength
 	f64, err := strconv.ParseFloat(string(result), 64)
 	if err != nil {
 		return 0, ErrorIncorrectValueForState
@@ -139,6 +149,8 @@ func (t *tokenProvider) ReadString() ([]byte, error) {
 					if err != nil {
 						return nil, err
 					}
+					t.LastReadLength = stringLength
+					t.CurrentOffset += t.LastReadLength
 					return rs, nil
 				}
 			} else if nextByte[stringLength-1] == 0x5c { // is slash
@@ -157,5 +169,7 @@ func (t *tokenProvider) ReadVariable() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	t.LastReadLength = len(variable)
+	t.CurrentOffset += t.LastReadLength
 	return variable, nil
 }

@@ -45,8 +45,8 @@ func (i *JsonextAST) GetAST() JsonNode {
 	return i.ast
 }
 
-func (i *JsonextAST) CreateRootNode(t AST_NODETYPE, value interface{}) error {
-	n, err := nodeFactory(t, value)
+func (i *JsonextAST) CreateRootNode(t AST_NODETYPE, value interface{}, currentOffset int, lastReadLength int) error {
+	n, err := nodeFactory(t, value, currentOffset, lastReadLength)
 	if err != nil {
 		return err
 	}
@@ -61,12 +61,12 @@ func (i *JsonextAST) CreateRootNode(t AST_NODETYPE, value interface{}) error {
 	return nil
 }
 
-func (i *JsonextAST) CreateNewASTNode(t AST_NODETYPE, value interface{}) error {
+func (i *JsonextAST) CreateNewASTNode(t AST_NODETYPE, value interface{}, currentOffset int, lastReadLength int) error {
 	if i.state == AST_STATE_FINISHED {
 		return ErrorASTComplete
 	}
 	if i.ast == nil {
-		return i.CreateRootNode(t, value)
+		return i.CreateRootNode(t, value, currentOffset, lastReadLength)
 	}
 	latest, err := i.astTrace.Peek()
 	if err != nil {
@@ -74,20 +74,23 @@ func (i *JsonextAST) CreateNewASTNode(t AST_NODETYPE, value interface{}) error {
 	}
 
 	switch realNode := latest.(type) {
+	//stack have array at top, awaiting element
 	case *JsonArrayNode:
-		return i.CreateNewNodeForArrayObject(realNode, t, value)
+		return i.CreateNewNodeForArrayObject(realNode, t, value, currentOffset, lastReadLength)
+		// stack have object at top, awaiting kv pair node
 	case *JsonObjectNode:
-		return i.CreateNewNodeForObject(realNode, t, value)
+		return i.CreateNewNodeForObject(realNode, t, value, currentOffset, lastReadLength)
+		// stack have kvpari at top, awaiting value node
 	case *JsonKeyValuePairNode:
-		return i.CreateValueNodeForKVPairs(realNode, t, value)
+		return i.CreateValueNodeForKVPairs(realNode, t, value, currentOffset, lastReadLength)
 	default:
 		return ErrorASTUnexpectedElement
 	}
 
 }
 
-func (i *JsonextAST) CreateNewNodeForArrayObject(owner *JsonArrayNode, t AST_NODETYPE, value interface{}) error {
-	n, err := nodeFactory(t, value)
+func (i *JsonextAST) CreateNewNodeForArrayObject(owner *JsonArrayNode, t AST_NODETYPE, value interface{}, currentOffset int, lastReadLength int) error {
+	n, err := nodeFactory(t, value, currentOffset, lastReadLength)
 	if err != nil {
 		return err
 	}
@@ -101,12 +104,12 @@ func (i *JsonextAST) CreateNewNodeForArrayObject(owner *JsonArrayNode, t AST_NOD
 	return nil
 }
 
-func (i *JsonextAST) CreateNewNodeForObject(owner *JsonObjectNode, t AST_NODETYPE, value interface{}) error {
-	keyNode, err := nodeFactory(t, value)
+func (i *JsonextAST) CreateNewNodeForObject(owner *JsonObjectNode, t AST_NODETYPE, value interface{}, currentOffset int, lastReadLength int) error {
+	keyNode, err := nodeFactory(t, value, currentOffset, lastReadLength)
 	if err != nil {
 		return err
 	}
-	n, err := nodeFactory(AST_KVPAIR, keyNode)
+	n, err := nodeFactory(AST_KVPAIR, keyNode, currentOffset, lastReadLength)
 	if err != nil {
 		return err
 	}
@@ -114,9 +117,9 @@ func (i *JsonextAST) CreateNewNodeForObject(owner *JsonObjectNode, t AST_NODETYP
 	return nil
 }
 
-func (i *JsonextAST) CreateValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_NODETYPE, value interface{}) error {
+func (i *JsonextAST) CreateValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_NODETYPE, value interface{}, currentOffset int, lastReadLength int) error {
 
-	n, err := nodeFactory(t, value)
+	n, err := nodeFactory(t, value, currentOffset, lastReadLength)
 	if err != nil {
 		return err
 	}
@@ -126,7 +129,8 @@ func (i *JsonextAST) CreateValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AS
 	} else {
 		// primivite value, finalize the k-v pair and append to the object node
 		owner.Value = n
-		err = i.FinlizeKVPair()
+		owner.EndOffset = currentOffset // {"1":2,"3":4}, here we are at "1":2,
+		err = i.FinlizeKVPair(currentOffset, false)
 		if err != nil {
 			return err
 		}
@@ -134,7 +138,9 @@ func (i *JsonextAST) CreateValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AS
 	return nil
 }
 
-func (i *JsonextAST) FinlizeKVPair() error {
+// 2 reason to finalise, enclose of kv pair due to `,`, enclose of kv pair due to `}`
+// {"1":2,"3":4}
+func (i *JsonextAST) FinlizeKVPair(currentOffset int, isLastElement bool) error {
 	kvElement, err := i.astTrace.Pop() // pop the kv, because it should be finalized to objet now.
 	if err == util.ErrorEndOfStack {
 		return ErrorASTStackEmpty
@@ -149,18 +155,22 @@ func (i *JsonextAST) FinlizeKVPair() error {
 	if kvOwnerObj.GetNodeType() != AST_OBJECT {
 		return ErrorASTUnexpectedElement
 	}
-	kvOwnerObj.(*JsonObjectNode).Append(kvElement.(*JsonKeyValuePairNode))
+	el := kvOwnerObj.(*JsonObjectNode)
+	el.Append(kvElement.(*JsonKeyValuePairNode))
+	if isLastElement {
+		el.EndOffset = currentOffset
+	}
 	return nil
 }
 
-func (i *JsonextAST) EncloseLatestElements() error {
+func (i *JsonextAST) EncloseLatestElements(currentOffset int) error {
 
 	itemToFinalize, err := i.astTrace.Pop()
 	if err == util.ErrorEndOfStack {
 		i.state = AST_STATE_FINISHED
 		return nil
 	}
-	err = i.StoreFinlizedItemToOwner(itemToFinalize)
+	err = i.StoreFinlizedItemToOwner(itemToFinalize, currentOffset)
 	if err != nil {
 		return err
 	}
@@ -176,7 +186,7 @@ func (i *JsonextAST) TopElementType() (AST_NODETYPE, error) {
 	return t.GetNodeType(), nil
 }
 
-func (i *JsonextAST) StoreFinlizedItemToOwner(itemToFinalize JsonNode) error {
+func (i *JsonextAST) StoreFinlizedItemToOwner(itemToFinalize JsonNode, currentOffset int) error {
 	nodeType := itemToFinalize.GetNodeType()
 	switch nodeType {
 	case AST_OBJECT: // item can only be value of kv or element of array
@@ -189,13 +199,22 @@ func (i *JsonextAST) StoreFinlizedItemToOwner(itemToFinalize JsonNode) error {
 		}
 		switch ownerElement.GetNodeType() {
 		case AST_ARRAY:
-			ownerElement.(*JsonArrayNode).Append(itemToFinalize) // array case, put it in array
+			el := ownerElement.(*JsonArrayNode)
+			el.EndOffset = currentOffset
+			el.Append(itemToFinalize) // array case, put it in array
 		case AST_KVPAIR: // kv case
-			ownerElement.(*JsonKeyValuePairNode).Value = itemToFinalize
-			err = i.FinlizeKVPair()
+			el := ownerElement.(*JsonKeyValuePairNode)
+			el.Value = itemToFinalize
+			// {"1":2,"3":4},
+			// for the `"1":2,`, the EndOffset would just be currentOffset
+			// {"1":2,"3":4}, here we are at `"3":4}`  currentOffset is one step after `}`,
+			// the enclosing symbol fires the enclose operation, step one step backward to indicate the kv ends at `}`(not including)
+			el.EndOffset = currentOffset - 1 //
+			err = i.FinlizeKVPair(currentOffset, true)
 			if err != nil {
 				return err
 			}
+
 		default:
 			return ErrorASTUnexpectedOwnerElement
 		}

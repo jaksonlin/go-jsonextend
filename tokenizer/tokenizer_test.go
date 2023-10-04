@@ -1,6 +1,8 @@
 package tokenizer_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -108,6 +110,26 @@ func TestMyJson1(t *testing.T) {
 	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
 
 	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if sm.GetASTBuilder().HasOpenElements() {
+		t.FailNow()
+	}
+
+}
+
+func TestNull(t *testing.T) {
+	var someItem []int
+	data, err := json.Marshal(someItem)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()

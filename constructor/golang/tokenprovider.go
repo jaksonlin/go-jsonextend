@@ -1,9 +1,7 @@
 package golang
 
 import (
-	"io"
 	"reflect"
-	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/constructor"
 	"github.com/jaksonlin/go-jsonextend/token"
@@ -11,10 +9,8 @@ import (
 )
 
 type workingItem struct {
-	reflectValue   reflect.Value
-	tokenType      token.TokenType
-	isArrayElement bool
-	isRoot         bool
+	reflectValue reflect.Value
+	tokenType    token.TokenType
 }
 
 type tokenProvider struct {
@@ -32,7 +28,7 @@ func newTokenProvider(out interface{}) (*tokenProvider, error) {
 		return nil, ErrorUnknownData
 	}
 
-	s.Push(&workingItem{reflectValue: v, tokenType: theTokenType, isArrayElement: false, isRoot: true})
+	s.Push(&workingItem{reflectValue: v, tokenType: theTokenType})
 
 	return &tokenProvider{
 		rootOut:      v,
@@ -44,77 +40,79 @@ func newTokenProvider(out interface{}) (*tokenProvider, error) {
 var _ constructor.TokenProvider = &tokenProvider{}
 
 func (t *tokenProvider) ReadBool() (bool, error) {
-	// in boolean state we will consume until it is the end of boolean.
-	data, err := t.dataSource.Peek(1)
-	if err != nil {
-		return false, err
-	}
 
-	numberOfRead := 0
-	if data[0] == 't' {
-		numberOfRead = 4
-	} else if data[0] == 'f' {
-		numberOfRead = 5
-	} else {
-		return false, ErrorIncorrectCharacter
-	}
-
-	rs := make([]byte, numberOfRead)
-
-	_, err = io.ReadFull(t.dataSource, rs)
-	if err != nil {
-		return false, err
-	}
-
-	rsBoolean, err := strconv.ParseBool(string(rs))
-	if err != nil {
-		return false, ErrorIncorrectValueForState
-	}
-	return rsBoolean, nil
 }
 
 func (t *tokenProvider) processArrayItem(item *workingItem) {
 	len := item.reflectValue.Len()
 	// push the end tag
-	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACKET, isArrayElement: false, isRoot: false})
+	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACKET})
 	for i := len - 1; i >= 0; i -= 1 {
 		element := item.reflectValue.Index(i)
 		theTokenType := token.GetTokenTypeByReflection(&element)
-		t.workingStack.Push(&workingItem{reflectValue: element, tokenType: theTokenType, isArrayElement: true, isRoot: false})
+		t.workingStack.Push(&workingItem{reflectValue: element, tokenType: theTokenType})
 	}
+}
+
+func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
+	s := util.NewStack[reflect.Value]()
+	s.Push(workItem.reflectValue)
+	for {
+		item, err := s.Pop()
+		if err != nil {
+			break
+		}
+		for i := item.NumField() - 1; i >= 0; i -= 1 {
+			field := item.Type().Field(i)
+			if field.Anonymous {
+				s.Push(item.Field(i))
+			}
+			if field.IsExported() {
+				element := item.Index(i)
+				theTokenType := token.GetTokenTypeByReflection(&element)
+				// in stack value first then key
+				t.workingStack.Push(&workingItem{reflectValue: element, tokenType: theTokenType})
+				t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(field.Name), tokenType: token.TOKEN_STRING})
+			}
+		}
+	}
+
+	return nil
+}
+
+func (t *tokenProvider) processMapItem(item *workingItem) error {
+	for _, key := range item.reflectValue.MapKeys() {
+		mapValue := item.reflectValue.MapIndex(key)
+		valueTokenType := token.GetTokenTypeByReflection(&mapValue)
+		t.workingStack.Push(&workingItem{reflectValue: mapValue, tokenType: valueTokenType})
+		keyTokenType := token.GetTokenTypeByReflection(&key)
+		if keyTokenType == token.TOKEN_NUMBER {
+			keyValue, err := convertNumericToString(key)
+			if err != nil {
+				return err
+			}
+			t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(keyValue), tokenType: token.TOKEN_STRING})
+		} else if keyTokenType == token.TOKEN_STRING {
+			t.workingStack.Push(&workingItem{reflectValue: key, tokenType: token.TOKEN_STRING})
+		} else {
+			return ErrorInvalidMapKey
+		}
+
+	}
+	return nil
 }
 
 func (t *tokenProvider) processObjectItem(item *workingItem) error {
 	// push the end tag
-	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACE, isArrayElement: false, isRoot: false})
+	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACE})
 
 	if item.reflectValue.Kind() == reflect.Struct {
-		for i := item.reflectValue.NumField() - 1; i >= 0; i -= 1 {
-			field := item.reflectValue.Type().Field(i)
-			if field.IsExported() {
-				element := item.reflectValue.Index(i)
-				theTokenType := token.GetTokenTypeByReflection(&element)
-				// in stack value first then key
-				t.workingStack.Push(&workingItem{reflectValue: element, tokenType: theTokenType, isArrayElement: false, isRoot: false})
-				t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(field.Name), tokenType: token.TOKEN_STRING, isArrayElement: false, isRoot: false})
-			}
+		if err := t.flattenStruct(item); err != nil {
+			return err
 		}
 	} else {
-		for _, key := range item.reflectValue.MapKeys() {
-			mapValue := item.reflectValue.MapIndex(key)
-			valueTokenType := token.GetTokenTypeByReflection(&mapValue)
-			t.workingStack.Push(&workingItem{reflectValue: mapValue, tokenType: valueTokenType, isArrayElement: false, isRoot: false})
-			keyTokenType := token.GetTokenTypeByReflection(&key)
-			if keyTokenType == token.TOKEN_NUMBER {
-				keyValue, err := convertNumericToString(key)
-				if err != nil {
-					return err
-				}
-				t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(keyValue), tokenType: token.TOKEN_STRING, isArrayElement: false, isRoot: false})
-			} else {
-				t.workingStack.Push(&workingItem{reflectValue: key, tokenType: keyTokenType, isArrayElement: false, isRoot: false})
-			}
-
+		if err := t.processMapItem(item); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -146,7 +144,6 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 	} else {
 		t.visited[addr] = true
 	}
-	t.processArrayItem(item)
 	switch item.tokenType {
 	case token.TOKEN_LEFT_BRACKET:
 		t.processArrayItem(item)

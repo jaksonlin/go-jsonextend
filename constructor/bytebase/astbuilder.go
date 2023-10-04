@@ -31,7 +31,7 @@ func (t *ASTByteBaseBuilder) GetNextTokenType() (token.TokenType, error) {
 	}
 
 	if token.IsSymbolToken(nextTokenType) { // note symbol token will be parse in the corresponding primitive value state
-		err = t.astConstructor.RecordSyntaxSymbol(nextTokenType)
+		err = t.astConstructor.RecordSyntaxSymbol(nextTokenType, t.provider.CurrentOffset, t.provider.LastReadLength)
 		if err != nil {
 			return token.TOKEN_DUMMY, err
 		}
@@ -60,12 +60,17 @@ func (t *ASTByteBaseBuilder) ReadVariable() ([]byte, error) {
 }
 
 func (t *ASTByteBaseBuilder) RecordSyntaxSymbol(b token.TokenType) error {
-	return t.astConstructor.RecordSyntaxSymbol(b)
+	lastReadLength := t.provider.LastReadLength
+	currentOffset := t.provider.CurrentOffset
+	return t.astConstructor.RecordSyntaxSymbol(b, currentOffset, lastReadLength)
 }
 
 func (t *ASTByteBaseBuilder) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
-	return t.astConstructor.RecordStateValue(valueType, nodeValue)
+	lastReadLength := t.provider.LastReadLength
+	currentOffset := t.provider.CurrentOffset
+	return t.astConstructor.RecordStateValue(valueType, nodeValue, currentOffset, lastReadLength)
 }
+
 func (i *ASTByteBaseBuilder) GetAST() ast.JsonNode {
 	return i.astConstructor.GetAST()
 }

@@ -11,7 +11,7 @@ type astByteBaseConstructor struct {
 	syntaxChecker *syntaxChecker
 }
 
-var _ constructor.ASTManager = &astByteBaseConstructor{}
+var _ constructor.ASTByteReaderManager = &astByteBaseConstructor{}
 
 func newASTConstructor() *astByteBaseConstructor {
 	return &astByteBaseConstructor{
@@ -21,15 +21,15 @@ func newASTConstructor() *astByteBaseConstructor {
 }
 
 // when a json symbol is read, push it to syntax checker and construct the AST stack elements (as described in ast.go)
-func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
+func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType, currentOffset int, lastReadLength int) error {
 	//routing base on symbol
 	switch b {
 	case token.TOKEN_LEFT_BRACE:
 		i.syntaxChecker.PushSymbol('{')
-		return i.ast.CreateNewASTNode(ast.AST_OBJECT, nil)
+		return i.ast.CreateNewASTNode(ast.AST_OBJECT, nil, currentOffset, lastReadLength)
 	case token.TOKEN_LEFT_BRACKET:
 		i.syntaxChecker.PushSymbol('[')
-		return i.ast.CreateNewASTNode(ast.AST_ARRAY, nil)
+		return i.ast.CreateNewASTNode(ast.AST_ARRAY, nil, currentOffset, lastReadLength)
 	case token.TOKEN_RIGHT_BRACKET:
 		i.syntaxChecker.PushSymbol(']')
 		// check syntax before manipulate the AST
@@ -37,7 +37,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 		if err != nil {
 			return err
 		}
-		err = i.ast.EncloseLatestElements()
+		err = i.ast.EncloseLatestElements(currentOffset)
 		if err != nil {
 			return err
 		}
@@ -48,7 +48,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 		if err != nil {
 			return err
 		}
-		err = i.ast.EncloseLatestElements()
+		err = i.ast.EncloseLatestElements(currentOffset)
 		if err != nil {
 			return err
 		}
@@ -62,9 +62,9 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 	return nil
 }
 
-func (i *astByteBaseConstructor) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
+func (i *astByteBaseConstructor) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}, currentOffset, lastReadLength int) error {
 	i.syntaxChecker.PushValue(valueType)
-	return i.ast.CreateNewASTNode(valueType, nodeValue)
+	return i.ast.CreateNewASTNode(valueType, nodeValue, currentOffset, lastReadLength)
 }
 
 func (i *astByteBaseConstructor) GetAST() ast.JsonNode {

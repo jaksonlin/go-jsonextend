@@ -26,15 +26,21 @@ const (
 	AST_NODE_UNDEFINED     AST_NODETYPE = 210
 )
 
-func nodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
+func nodeFactory(t AST_NODETYPE, value interface{}, currentOffset int, lastReadLength int) (JsonNode, error) {
 
 	switch t {
 	case AST_ARRAY:
 		return &JsonArrayNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - 1, //we read [ and pop, the offset is moving forward 1 position
+			},
 			Value: make([]JsonNode, 0),
 		}, nil
 	case AST_OBJECT:
 		return &JsonObjectNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - 1, //we read { and pop, the offset is moving forward 1 position
+			},
 			Value: make([]*JsonKeyValuePairNode, 0),
 		}, nil
 	case AST_KVPAIR:
@@ -43,26 +49,49 @@ func nodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 			return nil, ErrorASTKeyValuePairNotStringAsKey
 		}
 		return &JsonKeyValuePairNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - lastReadLength,
+			},
 			Key: node,
 		}, nil
 	case AST_STRING:
 		return &JsonStringNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - lastReadLength, // _"abc"_ <- offset is at the next location, 6 - 5(length) get the starting offset
+				EndOffset:   currentOffset,                  // [StartOffset, EndOffset), close-open range
+			},
 			Value: value.([]byte),
 		}, nil
 	case AST_NUMBER:
 		return &JsonNumberNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - lastReadLength,
+				EndOffset:   currentOffset,
+			},
 			Value: value.(float64),
 		}, nil
 	case AST_BOOLEAN:
 		return &JsonBooleanNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - lastReadLength,
+				EndOffset:   currentOffset,
+			},
 			Value: value.(bool),
 		}, nil
 	case AST_NULL:
 		return &JsonNullNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - lastReadLength,
+				EndOffset:   currentOffset,
+			},
 			Value: nil,
 		}, nil
 	case AST_VARIABLE:
 		node := &JsonExtendedVariableNode{
+			NodeBase: NodeBase{
+				StartOffset: currentOffset - lastReadLength,
+				EndOffset:   currentOffset,
+			},
 			Value: value.([]byte),
 		}
 		node.extractVariable()
@@ -70,6 +99,10 @@ func nodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 	case AST_STRING_VARIABLE:
 		node := &JsonExtendedStringWIthVariableNode{
 			JsonStringNode: JsonStringNode{
+				NodeBase: NodeBase{
+					StartOffset: currentOffset - lastReadLength,
+					EndOffset:   currentOffset,
+				},
 				Value: value.([]byte),
 			},
 		}
@@ -107,7 +140,12 @@ type JsonStringValueNode interface {
 	GetValue() string
 }
 
+type NodeBase struct {
+	StartOffset int
+	EndOffset   int
+}
 type JsonStringNode struct {
+	NodeBase
 	Value []byte
 }
 
@@ -149,6 +187,7 @@ func (node *JsonStringNode) ToArrayNode() (*JsonArrayNode, error) {
 }
 
 type JsonNumberNode struct {
+	NodeBase
 	Value float64
 }
 
@@ -163,6 +202,7 @@ func (node *JsonNumberNode) Visit(visitor JsonVisitor) error {
 }
 
 type JsonBooleanNode struct {
+	NodeBase
 	Value bool
 }
 
@@ -177,6 +217,7 @@ func (node *JsonBooleanNode) Visit(visitor JsonVisitor) error {
 }
 
 type JsonNullNode struct {
+	NodeBase
 	Value interface{}
 }
 
@@ -191,6 +232,7 @@ func (node *JsonNullNode) Visit(visitor JsonVisitor) error {
 }
 
 type JsonArrayNode struct {
+	NodeBase
 	Value []JsonNode
 }
 
@@ -213,6 +255,7 @@ func (node *JsonArrayNode) Length() int {
 }
 
 type JsonKeyValuePairNode struct {
+	NodeBase
 	Key   JsonStringValueNode
 	Value JsonNode
 }
@@ -232,6 +275,7 @@ func (node *JsonKeyValuePairNode) IsFilled() bool {
 }
 
 type JsonObjectNode struct {
+	NodeBase
 	Value []*JsonKeyValuePairNode
 }
 
@@ -254,6 +298,7 @@ func (node *JsonObjectNode) Length() int {
 }
 
 type JsonExtendedVariableNode struct {
+	NodeBase
 	Value    []byte
 	Variable string
 }

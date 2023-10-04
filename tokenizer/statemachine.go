@@ -109,6 +109,6 @@ func (i *TokenizerStateMachine) GetAST() ast.JsonNode {
 	return i.astBuilder.GetAST()
 }
 
-func (i *TokenizerStateMachine) GetASTBuilder() constructor.ASTManager {
+func (i *TokenizerStateMachine) GetASTBuilder() constructor.ASTManagerBase {
 	return i.astBuilder
 }
