@@ -3247,3 +3247,49 @@ func TestEmbeddingFields(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+type mybool bool
+
+var _ json.Unmarshaler = (*mybool)(nil)
+
+func (m *mybool) UnmarshalJSON(data []byte) error {
+	// your unmarshalling logic here
+	if data[0] == 'f' {
+		*m = false
+	} else {
+		*m = true
+	}
+	return nil
+}
+
+func TestCusomUnmarshal(t *testing.T) {
+
+	type mydata struct {
+		T1 *mybool
+	}
+
+	var someItem mybool = false
+	var test1 mydata = mydata{T1: &someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker mydata
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if *myReceiver.T1 != false {
+		t.FailNow()
+	}
+
+}

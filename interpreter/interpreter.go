@@ -23,7 +23,7 @@ type JsonVisitor interface {
 }
 
 type standardVisitor struct {
-	sb           strings.Builder
+	sb           *bytes.Buffer
 	indentString string
 	indent       int
 	variables    map[string]interface{}
@@ -36,8 +36,9 @@ var _ JsonVisitor = &standardVisitor{}
 var colonFormat = []byte{' ', ':', ' '}
 
 func NewInterpreter(variables map[string]interface{}) *standardVisitor {
+
 	return &standardVisitor{
-		sb:           strings.Builder{},
+		sb:           bytes.NewBuffer(make([]byte, 0)),
 		indentString: strings.Repeat(" ", 4),
 		indent:       0,
 		variables:    variables,
@@ -180,8 +181,8 @@ func (s *standardVisitor) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) 
 	return nil
 }
 
-func (s *standardVisitor) GetOutput() string {
-	return s.sb.String()
+func (s *standardVisitor) GetOutput() []byte {
+	return s.sb.Bytes()
 }
 
 func (s *standardVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
@@ -201,7 +202,7 @@ func (s *standardVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	return nil
 }
 
-func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, error) {
+func Interpret(node ast.JsonNode, variables map[string]interface{}) ([]byte, error) {
 	// deep first traverse the AST
 
 	visitor := NewInterpreter(variables)
@@ -215,7 +216,7 @@ func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, err
 		err = node.Visit(visitor)
 		if err != nil {
 			if err != util.ErrorEndOfStack {
-				return "", err
+				return nil, err
 			} else {
 				break
 			}
@@ -224,7 +225,7 @@ func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, err
 	}
 
 	if visitor.getSymbolLength() > 0 {
-		return "", ErrorInterpreSymbolFailure
+		return nil, ErrorInterpreSymbolFailure
 	}
 	rs := visitor.GetOutput()
 	return rs, nil

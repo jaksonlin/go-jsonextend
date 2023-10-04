@@ -49,6 +49,8 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 		}
 		childElementType = fieldInfo.Type()
 
+	} else {
+		return nil, NewErrorInternalExpectingStructButFindOthers(childElementType.Kind().String())
 	}
 
 	// 2. create the collection's reflection value representative
@@ -56,6 +58,8 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 	if err != nil {
 		return nil, err
 	}
+
+	// 2.1 check if unmarshaller is implements the unmarshaller
 
 	// 3. create relation
 	newResolver.bindObjectParent(key, resolver)

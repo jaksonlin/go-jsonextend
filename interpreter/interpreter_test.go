@@ -126,7 +126,7 @@ func TestInterpreter(t *testing.T) {
 	fmt.Println(rs)
 
 	var someMap map[string]interface{}
-	err = json.Unmarshal([]byte(rs), &someMap)
+	err = json.Unmarshal(rs, &someMap)
 	if err != nil {
 		t.FailNow()
 	}

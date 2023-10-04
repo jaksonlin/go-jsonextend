@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
@@ -26,6 +27,7 @@ type unmarshallResolver struct {
 	parent               *unmarshallResolver
 	ptrToActualValue     reflect.Value // single ptr to no matter what actual value is (for *****int, keeps only *int to the actual value)
 	fields               map[string]reflect.Value
+	hasUnmarshaller      bool
 }
 
 func (resolver *unmarshallResolver) getAllFields() {
@@ -351,6 +353,25 @@ func (resolver *unmarshallResolver) VisitObjectNode(node *ast.JsonObjectNode) er
 }
 
 func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) error {
+	if resolver.isPointerValue {
+		unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
+		if unmarshalMethod.IsValid() {
+			var payload []byte
+			if node.Value {
+				payload = []byte("true")
+			} else {
+				payload = []byte("false")
+			}
+			result := unmarshalMethod.Call([]reflect.Value{reflect.ValueOf(payload)})
+			if unmarshalErr, ok := result[0].Interface().(error); ok {
+				if unmarshalErr != nil {
+					return unmarshalErr
+				}
+			}
+			v := resolver.ptrToActualValue.Elem().Interface()
+			fmt.Println(v)
+		}
+	}
 	resolver.setValue(node.Value)
 	return resolver.resolve()
 }
