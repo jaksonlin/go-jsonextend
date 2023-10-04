@@ -3192,21 +3192,29 @@ func TestFieldByTag(t *testing.T) {
 }
 
 func TestEmbeddingFields(t *testing.T) {
-	type mydata struct {
-		Name1   string `json:"name"`
-		Name2   int    `json:"age"`
+	type mydata1 struct {
+		Name1 string `json:"name"`
+	}
+	type database struct {
+		Name2 int `json:"age"`
+	}
+	type mydata2 struct {
+		database
 		Address string
 	}
 
 	type newTest struct {
-		mydata
+		mydata1
+		mydata2
 		Home string
 	}
 
-	testdata := mydata{"Ann", 198, "CA Redwood shore"}
+	testdata1 := mydata1{"Ann"}
+	testdata2 := mydata2{database: database{198}, Address: "CA Redwood shore"}
 	var test1 newTest = newTest{
-		mydata: testdata,
-		Home:   "US",
+		mydata1: testdata1,
+		mydata2: testdata2,
+		Home:    "US",
 	}
 	data, _ := json.Marshal(test1)
 
