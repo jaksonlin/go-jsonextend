@@ -436,24 +436,3 @@ func TestInterfaceReceiver(t *testing.T) {
 	}
 
 }
-
-type someType struct {
-	t string
-}
-
-func (s someType) String() string {
-	return s.t
-}
-
-var _ fmt.Stringer = someType{}
-
-func TestMapConvert(t *testing.T) {
-
-	m := map[someType]int{{"abc"}: 1}
-	data, err := json.Marshal(m)
-	if err != nil {
-		t.Log(err.Error())
-		t.FailNow()
-	}
-	fmt.Println(data)
-}

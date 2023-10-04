@@ -3200,9 +3200,14 @@ func TestEmbeddingFields(t *testing.T) {
 
 	type newTest struct {
 		mydata
+		Home string
 	}
 
-	test1 := mydata{"Ann", 198, "CA Redwood shore"}
+	testdata := mydata{"Ann", 198, "CA Redwood shore"}
+	var test1 newTest = newTest{
+		mydata: testdata,
+		Home:   "US",
+	}
 	data, _ := json.Marshal(test1)
 
 	var checker newTest
@@ -3230,5 +3235,7 @@ func TestEmbeddingFields(t *testing.T) {
 	if myReceiver.Address != "CA Redwood shore" {
 		t.FailNow()
 	}
-
+	if myReceiver.Home != "US" {
+		t.FailNow()
+	}
 }
