@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/util"
 )
 
 var dummyMap map[string]interface{}
@@ -24,6 +25,43 @@ type unmarshallResolver struct {
 	objectKey            string
 	parent               *unmarshallResolver
 	ptrToActualValue     reflect.Value // single ptr to no matter what actual value is (for *****int, keeps only *int to the actual value)
+	fields               map[string]reflect.Value
+}
+
+func (resolver *unmarshallResolver) getAllFields() {
+	if len(resolver.fields) > 0 {
+		return
+	}
+	resolver.fields = make(map[string]reflect.Value)
+	s := util.NewStack[reflect.Value]()
+	s.Push(resolver.ptrToActualValue.Elem())
+
+	for {
+		item, err := s.Pop()
+		if err != nil {
+			break
+		}
+		for i := 0; i < item.NumField(); i++ {
+			fieldType := item.Type().Field(i)
+
+			fieldValue := item.Field(i)
+			if fieldType.Anonymous {
+				s.Push(fieldValue)
+				continue
+			}
+			if !fieldType.IsExported() || !fieldValue.IsValid() || !fieldValue.CanSet() {
+				continue
+			}
+
+			resolver.fields[fieldType.Name] = fieldValue
+			jsonTag := fieldType.Tag.Get("json")
+			if jsonTag != "" {
+				resolver.fields[jsonTag] = fieldValue
+			}
+
+		}
+
+	}
 }
 
 // a story for align to the go's json unmarshall is that, when the field is a pointer, and it points to a nil value, the unmarshall will resolve to a `nil pointer` not `pointer to nil value`
@@ -40,7 +78,7 @@ func (resolver *unmarshallResolver) resolveSliceDependency(dependentResolver *un
 	return nil
 }
 func (resolver *unmarshallResolver) resolveStructDependency(dependentResolver *unmarshallResolver) error {
-	field, err := resolver.getFieldByTag(resolver.ptrToActualValue.Elem(), dependentResolver.objectKey)
+	field, err := resolver.getFieldByTag(dependentResolver.objectKey)
 	if err != nil {
 		return err
 	}

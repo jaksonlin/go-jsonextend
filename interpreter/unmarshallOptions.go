@@ -71,6 +71,7 @@ func resolveStringVariable(stringVariable *ast.JsonExtendedStringWIthVariableNod
 
 }
 
+// json input value is always float64, convert to different numeric value based on out element kind
 func (resolver *unmarshallResolver) convertNumberBaseOnKind(value interface{}) interface{} {
 
 	switch resolver.outElementKind {

@@ -3190,3 +3190,45 @@ func TestFieldByTag(t *testing.T) {
 	}
 
 }
+
+func TestEmbeddingFields(t *testing.T) {
+	type mydata struct {
+		Name1   string `json:"name"`
+		Name2   int    `json:"age"`
+		Address string
+	}
+
+	type newTest struct {
+		mydata
+	}
+
+	test1 := mydata{"Ann", 198, "CA Redwood shore"}
+	data, _ := json.Marshal(test1)
+
+	var checker newTest
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver newTest
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Name1 != "Ann" {
+		t.FailNow()
+	}
+	if myReceiver.Name2 != 198 {
+		t.FailNow()
+	}
+	if myReceiver.Address != "CA Redwood shore" {
+		t.FailNow()
+	}
+
+}

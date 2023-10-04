@@ -22,21 +22,10 @@ func (resolver *unmarshallResolver) processKVKeyNode(node ast.JsonStringValueNod
 	return key, nil
 }
 
-func (resolver *unmarshallResolver) getFieldByTag(obj reflect.Value, objKey string) (reflect.Value, error) {
-
-	for i := 0; i < obj.NumField(); i++ {
-		field := obj.Type().Field(i)
-		if fieldTag := field.Tag.Get("json"); fieldTag == objKey {
-			fieldInfo := obj.Field(i)
-			if !fieldInfo.IsValid() || !fieldInfo.CanSet() {
-				return reflect.Value{}, NewErrorFieldNotValid(objKey)
-			}
-			return fieldInfo, nil
-		}
-	}
-	// fall back to field by name
-	fieldInfo := obj.FieldByName(objKey)
-	if !fieldInfo.IsValid() || !fieldInfo.CanSet() {
+func (resolver *unmarshallResolver) getFieldByTag(objKey string) (reflect.Value, error) {
+	resolver.getAllFields()
+	fieldInfo, ok := resolver.fields[objKey]
+	if !ok {
 		return reflect.Value{}, NewErrorFieldNotValid(objKey)
 	}
 	return fieldInfo, nil
@@ -54,7 +43,7 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 
 	} else if childElementType.Kind() == reflect.Struct {
 
-		fieldInfo, err := resolver.getFieldByTag(resolver.ptrToActualValue.Elem(), key) // struct field
+		fieldInfo, err := resolver.getFieldByTag(key) // struct field
 		if err != nil {
 			return nil, err
 		}
