@@ -59,8 +59,6 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 		return nil, err
 	}
 
-	// 2.1 check if unmarshaller is implements the unmarshaller
-
 	// 3. create relation
 	newResolver.bindObjectParent(key, resolver)
 

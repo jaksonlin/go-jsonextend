@@ -3293,3 +3293,79 @@ func TestCusomUnmarshal(t *testing.T) {
 	}
 
 }
+
+type myslice []int
+
+var _ json.Unmarshaler = (*myslice)(nil)
+
+func (m *myslice) UnmarshalJSON(data []byte) error {
+	// your unmarshalling logic here
+	*m = append(*m, 123)
+	return nil
+}
+func TestCusomUnmarshalSlice(t *testing.T) {
+
+	type mydata struct {
+		T1 myslice
+	}
+
+	var someItem myslice = []int{'1', '2', 3}
+	var test1 mydata = mydata{T1: someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker myslice = make(myslice, 0)
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
+}
+
+type mymap map[string]int
+
+var _ json.Unmarshaler = (mymap)(nil)
+
+func (m mymap) UnmarshalJSON(data []byte) error {
+	// your unmarshalling logic here
+	m["abc"] = 123
+	return nil
+}
+func TestCusomUnmarshalMap(t *testing.T) {
+
+	type mydata struct {
+		T1 mymap
+	}
+
+	var someItem mymap = mymap{"123": 1}
+	var test1 mydata = mydata{T1: someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker mymap = make(mymap)
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
+}
