@@ -9,7 +9,7 @@ type astGolangConstructor struct {
 	ast *ast.JsonextAST
 }
 
-var _ constructor.ASTManagerBase = &astGolangConstructor{}
+var _ constructor.ASTManager = &astGolangConstructor{}
 
 func newASTConstructor() *astGolangConstructor {
 	return &astGolangConstructor{

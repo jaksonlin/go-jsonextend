@@ -3,7 +3,6 @@ package golang
 import (
 	"reflect"
 
-	"github.com/jaksonlin/go-jsonextend/constructor"
 	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
@@ -37,11 +36,7 @@ func newTokenProvider(out interface{}) (*tokenProvider, error) {
 	}, nil
 }
 
-var _ constructor.TokenProvider = &tokenProvider{}
-
-func (t *tokenProvider) ReadBool() (bool, error) {
-
-}
+//var _ constructor.TokenProvider = &tokenProvider{}
 
 func (t *tokenProvider) processArrayItem(item *workingItem) {
 	len := item.reflectValue.Len()
@@ -166,18 +161,5 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 func (t *tokenProvider) ReadNull() error {
 
 	return nil
-
-}
-
-func (t *tokenProvider) ReadNumber() (float64, error) {
-
-	return f64, nil
-}
-
-func (t *tokenProvider) ReadString() ([]byte, error) {
-
-}
-
-func (t *tokenProvider) ReadVariable() ([]byte, error) {
 
 }
