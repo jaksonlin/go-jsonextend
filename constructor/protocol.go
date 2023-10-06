@@ -14,28 +14,15 @@ type TokenProvider interface {
 	GetNextTokenType() (token.TokenType, error)
 }
 
-// user interface hide the implementation of offset recording from tokenizer
-type ASTBuilderFacade interface {
+type ASTManager interface {
 	RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error
-}
-
-type ASTStateRecorder interface {
-	RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}, currentPosition int, lastReadLength int) error
-}
-
-type ASTManagerBase interface {
 	GetAST() ast.JsonNode
 	HasComplete() bool
 	TopElementType() (ast.AST_NODETYPE, error)
 	HasOpenElements() bool
 }
-type ASTByteReaderManager interface {
-	ASTStateRecorder
-	ASTManagerBase
-}
 
 type ASTBuilder interface {
-	ASTBuilderFacade
-	ASTManagerBase
+	ASTManager
 	TokenProvider
 }

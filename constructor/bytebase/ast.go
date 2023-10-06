@@ -11,7 +11,7 @@ type astByteBaseConstructor struct {
 	syntaxChecker *syntaxChecker
 }
 
-var _ constructor.ASTByteReaderManager = &astByteBaseConstructor{}
+var _ constructor.ASTManager = &astByteBaseConstructor{}
 
 func newASTConstructor() *astByteBaseConstructor {
 	return &astByteBaseConstructor{
@@ -26,10 +26,10 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType, currentOf
 	switch b {
 	case token.TOKEN_LEFT_BRACE:
 		i.syntaxChecker.PushSymbol('{')
-		return i.ast.CreateNewASTNode(ast.AST_OBJECT, nil, currentOffset, lastReadLength)
+		return i.ast.CreateNewASTNode(ast.AST_OBJECT, nil)
 	case token.TOKEN_LEFT_BRACKET:
 		i.syntaxChecker.PushSymbol('[')
-		return i.ast.CreateNewASTNode(ast.AST_ARRAY, nil, currentOffset, lastReadLength)
+		return i.ast.CreateNewASTNode(ast.AST_ARRAY, nil)
 	case token.TOKEN_RIGHT_BRACKET:
 		i.syntaxChecker.PushSymbol(']')
 		// check syntax before manipulate the AST
@@ -62,9 +62,9 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType, currentOf
 	return nil
 }
 
-func (i *astByteBaseConstructor) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}, currentOffset, lastReadLength int) error {
+func (i *astByteBaseConstructor) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
 	i.syntaxChecker.PushValue(valueType)
-	return i.ast.CreateNewASTNode(valueType, nodeValue, currentOffset, lastReadLength)
+	return i.ast.CreateNewASTNode(valueType, nodeValue)
 }
 
 func (i *astByteBaseConstructor) GetAST() ast.JsonNode {

@@ -66,9 +66,7 @@ func (t *ASTByteBaseBuilder) RecordSyntaxSymbol(b token.TokenType) error {
 }
 
 func (t *ASTByteBaseBuilder) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
-	lastReadLength := t.provider.LastReadLength
-	currentOffset := t.provider.CurrentOffset
-	return t.astConstructor.RecordStateValue(valueType, nodeValue, currentOffset, lastReadLength)
+	return t.astConstructor.RecordStateValue(valueType, nodeValue)
 }
 
 func (i *ASTByteBaseBuilder) GetAST() ast.JsonNode {
