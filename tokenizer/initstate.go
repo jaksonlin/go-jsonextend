@@ -1,36 +1,37 @@
 package tokenizer
 
 import (
-	"bufio"
+	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/token"
 )
 
 type InitState struct {
 	TokenReader
 }
 
-var _ JzoneTokenizer = &InitState{}
+var _ Tokenizer = &InitState{}
 
 func (i *InitState) GetMode() StateMode {
 	return INIT_MODE
 }
 
-func (i *InitState) ProcessData(dataSource *bufio.Reader) error {
+func (i *InitState) ProcessData(provider constructor.TokenProvider) error {
 
-	nextByteToken, err := i.PreprocessToken(dataSource)
+	nextTokenType, err := provider.GetNextTokenType()
 	if err != nil {
 		return err
 	}
 
-	return i.switchState(nextByteToken)
+	return i.switchState(nextTokenType)
 }
 
-func (i *InitState) switchState(nextTokenType TokenType) error {
+func (i *InitState) switchState(nextTokenType token.TokenType) error {
 	err := i.stateMachine.SwitchStateByToken(nextTokenType)
 	if err != nil {
 		switch nextTokenType {
-		case TOKEN_SPACE:
+		case token.TOKEN_SPACE:
 		default:
-			return ErrorIncorrectCharacter
+			return NewErrorIncorrectToken(i.GetMode(), nextTokenType)
 		}
 	}
 	return nil

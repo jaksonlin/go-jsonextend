@@ -31,13 +31,13 @@ func TestAssignThingsPrimitives(t *testing.T) {
 
 	var validator test1
 	_ = json.Unmarshal(data, &validator)
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(strings.NewReader(string(data)))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 test1
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -85,13 +85,13 @@ func TestAssignThingsPrimitivesMapBasic(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(strings.NewReader(string(data)))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]int
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -128,13 +128,13 @@ func TestAssignThingsPrimitivesMapStructKeyBasic(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(strings.NewReader(string(data)))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -171,13 +171,13 @@ func TestAssignThingsPrimitivesMapPtrStructKeyBasic(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(strings.NewReader(string(data)))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -213,13 +213,13 @@ func TestAssignThingsPrimitivesMapStructKey(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[int]someTest
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -256,13 +256,13 @@ func TestAssignThingsPrimitivesMapPtrStructKey(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -295,13 +295,13 @@ func TestAssignThingsPrimitivesMapInterface(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someTest1Check map[string]interface{}
 	err = json.Unmarshal(data, &someTest1Check)
 	if err != nil {
@@ -364,13 +364,13 @@ func TestAssignThingsPrimitivesMapInterfaceInNonePointerRoot(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
 	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
@@ -430,13 +430,13 @@ func TestAssignThingsPrimitivesMapInterfaceInPointerRoot(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
 	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
@@ -494,13 +494,13 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfaceRoot(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
 	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
@@ -558,13 +558,13 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointerRoot(t *testing.T) 
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
 	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
@@ -625,13 +625,13 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointersRoot(t *testing.T)
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
 	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
@@ -677,13 +677,13 @@ func TestAssignThingsPrimitivesMapIntInterface(t *testing.T) {
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someTest1Check map[int]interface{}
 	err = json.Unmarshal(data, &someTest1Check)
 	if err != nil {
@@ -727,13 +727,13 @@ func TestAssignThingsPrimitivesMapBoolInterface(t *testing.T) {
 	data, _ := json.Marshal(t1)
 	fmt.Println(string(data))
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someTest1Check map[int]interface{}
 	err = json.Unmarshal(data, &someTest1Check)
 	if err != nil {
@@ -779,13 +779,13 @@ func TestAssignThingsPrimitivesInNonePointerRoot(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someRoot)
@@ -842,13 +842,13 @@ func TestAssignThingsPrimitivesInInterfaceRoot(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someRoot)
@@ -906,13 +906,13 @@ func TestAssignThingsPrimitivesInPointerInterfaceRoot(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someRoot)
@@ -972,13 +972,13 @@ func TestAssignThingsPrimitivesInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someRoot)
@@ -1035,13 +1035,13 @@ func TestAssignThingsPrimitivesInNestedPointerRoot(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someRoot)
@@ -1109,13 +1109,13 @@ func TestAssignThingsPrimitivesInNestedStructRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someRoot)
@@ -1178,14 +1178,14 @@ func TestAssignThingsPrimitivePointers(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
 
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 test1
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1251,14 +1251,14 @@ func TestAssignThingsPrimitivePointersInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
 
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTestRoot1 testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTestRoot1)
@@ -1325,14 +1325,14 @@ func TestAssignThingsPrimitivePointersInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
 
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTestRoot1 testRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTestRoot1)
@@ -1378,13 +1378,13 @@ func TestAssignThingsPrimitiveSlice(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []int
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1413,13 +1413,13 @@ func TestAssignThingsStructElementSlice(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []someTest
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1447,13 +1447,13 @@ func TestAssignThingsStructPtrElementSlice(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []someTest
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1482,13 +1482,13 @@ func TestAssignThingsStructInterfaceElementSlice(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []interface{}
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1530,13 +1530,13 @@ func TestAssignThingsPrimitiveSliceInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1584,13 +1584,13 @@ func TestAssignThingsNonePrimitiveSliceInNonePointerRoot(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1652,13 +1652,13 @@ func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1680,13 +1680,13 @@ func TestAssignThingsSliceWithInterfaceElement(t *testing.T) {
 	var validator []interface{}
 	_ = json.Unmarshal(data, &validator)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []interface{}
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1714,13 +1714,13 @@ func TestAssignThingsPrimitiveSliceInterfaceInNonePointerRoot(t *testing.T) {
 	var validator someRoot
 	_ = json.Unmarshal(data, &validator)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1748,13 +1748,13 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRoot(t *testing.T) {
 	var validator someRoot
 	_ = json.Unmarshal(data, &validator)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1791,13 +1791,13 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRootAndPointerValue(t *test
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1836,13 +1836,13 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]int
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1872,13 +1872,13 @@ func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [4]interface{}
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1911,13 +1911,13 @@ func TestAssignThingsPrimitiveArrayInNonePointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1950,13 +1950,13 @@ func TestAssignThingsPrimitiveArrayInPointerRoot(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -1984,13 +1984,13 @@ func TestAssignThingsPrimitiveArrayInterfaceInNonePointerRoot(t *testing.T) {
 	var mysomeRoot someRoot
 	_ = json.Unmarshal(data, &mysomeRoot)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -2018,13 +2018,13 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRoot(t *testing.T) {
 	var mysomeRoot someRoot
 	_ = json.Unmarshal(data, &mysomeRoot)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -2058,13 +2058,13 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRootAndPointerValue(t *test
 	var mysomeRoot someRoot
 	_ = json.Unmarshal(data, &mysomeRoot)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -2098,13 +2098,13 @@ func TestAssignThingsPrimitiveArraySliceCrossOver(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []int
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -2131,13 +2131,13 @@ func TestAssignThingsPrimitiveSliceArrayCrossOver(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]int
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -2170,13 +2170,13 @@ func TestAssignThingsPrimitiveArrayPointerValues(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]*int
 	err = interpreter.UnmarshallAST(node, nil, &someTest1)
@@ -2236,13 +2236,13 @@ func TestNestedPointerResolve(t *testing.T) {
 
 	// use our own
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(content)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(content))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 *********int
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
@@ -2268,13 +2268,13 @@ func TestBareStruct(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 someStruct
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
@@ -2298,13 +2298,13 @@ func TestPtrStruct(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 *someStruct
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
@@ -2343,13 +2343,13 @@ func TestCustomizeType(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 someStruct
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
@@ -2402,13 +2402,13 @@ func TestMapSliceType(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 []map[string][]interface{}
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
@@ -2443,13 +2443,13 @@ func TestEmptyObject(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
@@ -2475,13 +2475,13 @@ func TestEmptySlice(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
@@ -2508,13 +2508,13 @@ func TestEmptyArray(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
@@ -2533,13 +2533,13 @@ func TestInterfaceNil(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 interface{}
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2567,13 +2567,13 @@ func TestPtrSliceNilCaseInMap(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*[]int
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2605,13 +2605,13 @@ func TestPtrMapNilCaseInMap(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*map[int]int
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2643,13 +2643,13 @@ func TestPtrSliceNilCaseInSlice(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 []*[]int
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2685,13 +2685,13 @@ func TestSliceOfPtrToCollections(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 []*[]someStruct
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2724,13 +2724,13 @@ func TestInterfaceNilOnMapInterface(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*[]int
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2753,13 +2753,13 @@ func TestEmptyString(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 string
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2777,13 +2777,13 @@ func TestString(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 string
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2802,13 +2802,13 @@ func TestBool(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 bool
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2829,13 +2829,13 @@ func TestNumber(t *testing.T) {
 	var someInt int
 	_ = json.Unmarshal(data, &someInt)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 int
 	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
@@ -2918,7 +2918,7 @@ func TestFinalExam(t *testing.T) {
 		t.FailNow()
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
 	fd, err := os.OpenFile(`d:\test1.txt`, os.O_CREATE, 0664)
 	if err != nil {
 		t.FailNow()
@@ -2929,12 +2929,12 @@ func TestFinalExam(t *testing.T) {
 		t.FailNow()
 	}
 
-	err = sm.ProcessData(strings.NewReader(string(data)))
+	err = sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 SomeStruct1
 	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
@@ -3103,13 +3103,13 @@ func TestVariable(t *testing.T) {
 		"myvariable9": "hello9",
 	}
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(strings.NewReader(sample))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(strings.NewReader(sample))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 map[string]interface{}
 	err = interpreter.UnmarshallAST(node, variables, &someReceiver2)
 	if err != nil {
@@ -3166,13 +3166,13 @@ func TestFieldByTag(t *testing.T) {
 	var checker mydata
 	_ = json.Unmarshal(data, &checker)
 
-	sm := tokenizer.NewTokenizerStateMachine()
-	err := sm.ProcessData(bytes.NewReader(data))
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
-	node := sm.GetASTConstructor().GetAST()
+	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
 	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
@@ -3186,6 +3186,509 @@ func TestFieldByTag(t *testing.T) {
 		t.FailNow()
 	}
 	if myReceiver.Address != "CA Redwood shore" {
+		t.FailNow()
+	}
+
+}
+
+func TestEmbeddingFields(t *testing.T) {
+	type mydata1 struct {
+		Name1 string `json:"name"`
+	}
+	type database struct {
+		Name2 int `json:"age"`
+	}
+	type mydata2 struct {
+		database
+		Address string
+	}
+
+	type newTest struct {
+		mydata1
+		mydata2
+		Home string
+	}
+
+	testdata1 := mydata1{"Ann"}
+	testdata2 := mydata2{database: database{198}, Address: "CA Redwood shore"}
+	var test1 newTest = newTest{
+		mydata1: testdata1,
+		mydata2: testdata2,
+		Home:    "US",
+	}
+	data, _ := json.Marshal(test1)
+
+	var checker newTest
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver newTest
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Name1 != "Ann" {
+		t.FailNow()
+	}
+	if myReceiver.Name2 != 198 {
+		t.FailNow()
+	}
+	if myReceiver.Address != "CA Redwood shore" {
+		t.FailNow()
+	}
+	if myReceiver.Home != "US" {
+		t.FailNow()
+	}
+}
+
+type mybool bool
+
+var _ json.Unmarshaler = (*mybool)(nil)
+
+func (m *mybool) UnmarshalJSON(data []byte) error {
+	// your unmarshalling logic here
+	if data[0] == 'f' {
+		*m = false
+	} else {
+		*m = true
+	}
+	return nil
+}
+
+func TestCusomUnmarshal(t *testing.T) {
+
+	type mydata struct {
+		T1 *mybool
+	}
+
+	var someItem mybool = false
+	var test1 mydata = mydata{T1: &someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker mydata
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if *myReceiver.T1 != false {
+		t.FailNow()
+	}
+
+}
+
+type myslice []int
+
+var _ json.Unmarshaler = (*myslice)(nil)
+
+func (m *myslice) UnmarshalJSON(data []byte) error {
+	// your unmarshalling logic here
+	*m = append(*m, 123)
+	return nil
+}
+func TestCusomUnmarshalSlice(t *testing.T) {
+
+	type mydata struct {
+		T1 myslice
+	}
+
+	var someItem myslice = []int{'1', '2', 3}
+	var test1 mydata = mydata{T1: someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker myslice = make(myslice, 0)
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
+}
+
+type mymap map[string]int
+
+var _ json.Unmarshaler = (mymap)(nil)
+
+func (m mymap) UnmarshalJSON(data []byte) error {
+	// your unmarshalling logic here
+	m["abc"] = 123
+	return nil
+}
+func TestCusomUnmarshalMap(t *testing.T) {
+
+	type mydata struct {
+		T1 *mymap
+	}
+
+	var someItem mymap = mymap{"123": 1}
+	var test1 mydata = mydata{T1: &someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker mymap = make(mymap)
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if (*myReceiver.T1)["abc"] != 123 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalMapNonePointer(t *testing.T) {
+
+	type mydata struct {
+		T1 mymap
+	}
+
+	var someItem mymap = mymap{"123": 1}
+	var test1 mydata = mydata{T1: someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker mymap = make(mymap)
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.T1["abc"] != 123 {
+		t.FailNow()
+	}
+
+}
+
+type myUnmarshalstruct struct {
+	Name string
+	Age  int
+}
+
+var _ json.Unmarshaler = (*myUnmarshalstruct)(nil)
+
+func (m *myUnmarshalstruct) UnmarshalJSON(b []byte) error {
+	m.Name = string(b)
+	m.Age = 123
+	return nil
+}
+func TestCusomUnmarshalStruct(t *testing.T) {
+
+	var test1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
+	data, _ := json.Marshal(test1)
+
+	var checker myUnmarshalstruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver myUnmarshalstruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Name != checker.Name {
+		t.FailNow()
+	}
+	if myReceiver.Age != checker.Age {
+		t.FailNow()
+	}
+
+}
+
+func TestCusomUnmarshalStructInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 myUnmarshalstruct
+		Field2 int
+	}
+	var field1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
+	var test1 someStruct = someStruct{field1, 999}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1.Name != checker.Field1.Name {
+		t.FailNow()
+	}
+	if myReceiver.Field1.Age != 123 {
+		t.FailNow()
+	}
+	if myReceiver.Field2 != 999 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalStructInStructPointerField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myUnmarshalstruct
+		Field2 int
+	}
+	var field1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
+	var test1 someStruct = someStruct{&field1, 999}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1.Name != checker.Field1.Name {
+		t.FailNow()
+	}
+	if myReceiver.Field1.Age != 123 {
+		t.FailNow()
+	}
+	if myReceiver.Field2 != 999 {
+		t.FailNow()
+	}
+
+}
+
+type myString string
+
+func (m *myString) UnmarshalJSON(b []byte) error {
+	*m = myString(fmt.Sprintf("%s:%s", "abc", string(b)))
+	return nil
+}
+func TestCusomUnmarshalStringInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 myString // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myString = myString("123")
+	var test1 someStruct = someStruct{field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1 != checker.Field1 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalStringInStructPointerField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myString // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myString = myString("123")
+	var test1 someStruct = someStruct{&field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if *myReceiver.Field1 != *checker.Field1 {
+		t.FailNow()
+	}
+
+}
+
+type myNumber int
+
+func (m *myNumber) UnmarshalJSON(b []byte) error {
+	*m = myNumber(len(b))
+	return nil
+}
+func TestCusomUnmarshalIntInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 myNumber // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myNumber = myNumber(123)
+	var test1 someStruct = someStruct{field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1 != checker.Field1 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalIntInStructPointerField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myNumber // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myNumber = myNumber(123)
+	var test1 someStruct = someStruct{&field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if *myReceiver.Field1 != *checker.Field1 {
+		t.FailNow()
+	}
+
+}
+
+type myNil struct {
+	Age int
+}
+
+func (m *myNil) UnmarshalJSON(b []byte) error {
+	m.Age = len(b) * 10
+	return nil
+}
+func TestCusomUnmarshalNullInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myNil // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var test1 someStruct = someStruct{nil}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	// when a value is already nil, the unmarshaler won't help you to convert it to something not nil
+	if myReceiver.Field1 != checker.Field1 && myReceiver.Field1 != nil {
 		t.FailNow()
 	}
 

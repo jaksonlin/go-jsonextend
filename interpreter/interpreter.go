@@ -22,8 +22,8 @@ type JsonVisitor interface {
 	VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error
 }
 
-type standardVisitor struct {
-	sb           strings.Builder
+type prettyPrintVisitor struct {
+	sb           *bytes.Buffer
 	indentString string
 	indent       int
 	variables    map[string]interface{}
@@ -31,13 +31,14 @@ type standardVisitor struct {
 	stackFormat  *util.Stack[byte]
 }
 
-var _ JsonVisitor = &standardVisitor{}
+var _ JsonVisitor = &prettyPrintVisitor{}
 
 var colonFormat = []byte{' ', ':', ' '}
 
-func NewInterpreter(variables map[string]interface{}) *standardVisitor {
-	return &standardVisitor{
-		sb:           strings.Builder{},
+func NewPPInterpreter(variables map[string]interface{}) *prettyPrintVisitor {
+
+	return &prettyPrintVisitor{
+		sb:           bytes.NewBuffer(make([]byte, 0)),
 		indentString: strings.Repeat(" ", 4),
 		indent:       0,
 		variables:    variables,
@@ -46,11 +47,11 @@ func NewInterpreter(variables map[string]interface{}) *standardVisitor {
 	}
 }
 
-func (s *standardVisitor) getSymbolLength() int {
+func (s *prettyPrintVisitor) getSymbolLength() int {
 	return s.stackFormat.Length()
 }
 
-func (s *standardVisitor) WriteSymbol() error {
+func (s *prettyPrintVisitor) WriteSymbol() error {
 	symbol, e := s.stackFormat.Pop()
 	if e != nil {
 		return e
@@ -65,7 +66,7 @@ func (s *standardVisitor) WriteSymbol() error {
 		// put the closing symbol
 		s.sb.WriteByte(symbol)
 		// if we are in the middle of any collection,  break after writing the `comma`
-		// else we will consume the closing symbols
+		// else we will consume any number of closing symbols in between!
 		for symbol != ',' {
 			symbol, e = s.stackFormat.Pop()
 			if e != nil {
@@ -94,27 +95,27 @@ func (s *standardVisitor) WriteSymbol() error {
 	return nil
 }
 
-func (s *standardVisitor) VisitStringNode(node *ast.JsonStringNode) error {
+func (s *prettyPrintVisitor) VisitStringNode(node *ast.JsonStringNode) error {
 	s.sb.Write(node.Value)
 	return s.WriteSymbol()
 }
 
-func (s *standardVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
+func (s *prettyPrintVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
 	s.sb.WriteString(strconv.FormatFloat(node.Value, 'f', -1, 64))
 	return s.WriteSymbol()
 }
 
-func (s *standardVisitor) VisitBooleanNode(node *ast.JsonBooleanNode) error {
+func (s *prettyPrintVisitor) VisitBooleanNode(node *ast.JsonBooleanNode) error {
 	s.sb.WriteString(strconv.FormatBool(node.Value))
 	return s.WriteSymbol()
 }
 
-func (s *standardVisitor) VisitNullNode(node *ast.JsonNullNode) error {
+func (s *prettyPrintVisitor) VisitNullNode(node *ast.JsonNullNode) error {
 	s.sb.WriteString("null")
 	return s.WriteSymbol()
 }
 
-func (s *standardVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
+func (s *prettyPrintVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
 	var result []byte = make([]byte, len(node.Value))
 	copy(result, node.Value)
 	for varName, varDollarName := range node.Variables {
@@ -137,7 +138,7 @@ func (s *standardVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedStri
 	return s.WriteSymbol()
 }
 
-func (s *standardVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) error {
+func (s *prettyPrintVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) error {
 
 	varVal, ok := s.variables[node.Variable] // allow partial rendered
 	if !ok {
@@ -157,7 +158,7 @@ func (s *standardVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) 
 	return s.WriteSymbol()
 }
 
-func (s *standardVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
+func (s *prettyPrintVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
 	s.sb.WriteString("[\n")
 	s.indent++
 	s.sb.WriteString(strings.Repeat(s.indentString, s.indent))
@@ -172,7 +173,7 @@ func (s *standardVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
 	return nil
 }
 
-func (s *standardVisitor) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) error {
+func (s *prettyPrintVisitor) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) error {
 	// stack, first in last out, value go first ;-)
 	s.stackNode.Push(node.Value)
 	s.stackNode.Push(node.Key)
@@ -180,11 +181,11 @@ func (s *standardVisitor) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) 
 	return nil
 }
 
-func (s *standardVisitor) GetOutput() string {
-	return s.sb.String()
+func (s *prettyPrintVisitor) GetOutput() []byte {
+	return s.sb.Bytes()
 }
 
-func (s *standardVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
+func (s *prettyPrintVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	s.sb.WriteString("{\n")
 	s.indent++
 	s.sb.WriteString(strings.Repeat(s.indentString, s.indent))
@@ -201,10 +202,10 @@ func (s *standardVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	return nil
 }
 
-func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, error) {
+func PrettyInterpret(node ast.JsonNode, variables map[string]interface{}) ([]byte, error) {
 	// deep first traverse the AST
 
-	visitor := NewInterpreter(variables)
+	visitor := NewPPInterpreter(variables)
 	visitor.stackNode.Push(node)
 
 	for {
@@ -215,7 +216,7 @@ func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, err
 		err = node.Visit(visitor)
 		if err != nil {
 			if err != util.ErrorEndOfStack {
-				return "", err
+				return nil, err
 			} else {
 				break
 			}
@@ -224,7 +225,7 @@ func Interpret(node ast.JsonNode, variables map[string]interface{}) (string, err
 	}
 
 	if visitor.getSymbolLength() > 0 {
-		return "", ErrorInterpreSymbolFailure
+		return nil, ErrorInterpreSymbolFailure
 	}
 	rs := visitor.GetOutput()
 	return rs, nil

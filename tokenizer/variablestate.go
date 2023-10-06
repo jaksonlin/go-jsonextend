@@ -1,8 +1,7 @@
 package tokenizer
 
 import (
-	"bufio"
-
+	"github.com/jaksonlin/go-jsonextend/constructor"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -10,15 +9,15 @@ type VariableState struct {
 	PrimitiveValueTokenStateBase
 }
 
-var _ JzonePrimitiveTokenizer = &VariableState{}
+var _ PrimitiveValueTokenizer = &VariableState{}
 
 func (i *VariableState) GetMode() StateMode {
 	return VARIABLE_MODE
 }
 
-func (i *VariableState) ProcessData(dataSource *bufio.Reader) error {
+func (i *VariableState) ProcessData(provider constructor.TokenProvider) error {
 
-	variable, err := dataSource.ReadBytes('}')
+	variable, err := provider.ReadVariable()
 	if err != nil {
 		return err
 	}

@@ -41,6 +41,8 @@ var (
 	ErrorPrimitiveTypeCannotResolveDependency          = errors.New("pritimive type cannot resolve dependency")
 	ErrorNotSupportedASTNode                           = errors.New("not supported ast node")
 	ErrorInternalDependentResolverHasOnResolveLocation = errors.New("dependent value has no idex or object key set to resolve")
+	ErrorInvalidUnmarshalResult                        = errors.New("invalid unmarshal result")
+	ErrorInternalSymbolStackIncorrect                  = errors.New("interpret symbol stack invalid")
 )
 
 var (

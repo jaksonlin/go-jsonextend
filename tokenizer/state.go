@@ -1,8 +1,6 @@
 package tokenizer
 
-import (
-	"bufio"
-)
+import "github.com/jaksonlin/go-jsonextend/constructor"
 
 type StateMode uint
 
@@ -19,39 +17,38 @@ const (
 )
 
 // common tokenizer implementation
-type JzoneTokenizer interface {
-	ProcessData(dataSource *bufio.Reader) error
+type Tokenizer interface {
+	ProcessData(provider constructor.TokenProvider) error
 	GetMode() StateMode
 }
 
-// for none-symbol token, they hold primitive value (not array/object), these value should be hold by array/object later,
-// store their value to somewhere based on extracted state, able to switchState() without indicator, because there's no way from a primitive
-// value to say where the state should go next
-type JzonePrimitiveStateProcessor interface {
+// for primitive value token, they hold primitive value (not array/object)
+// store their value to somewhere based on extracted value,
+// and the switch of state is based on AST current state, therefore no need for parameterized state change
+type PrimitiveStateProcessor interface {
 	switchState() error
 	storeTokenValue(mode StateMode, value interface{}) error
 }
 
-// eventually as a state in the state machine, it also implement its way of ProcessData from the stream, but this would leave to the concrete state, case by case
-type JzonePrimitiveTokenizer interface {
-	JzoneTokenizer
-	JzonePrimitiveStateProcessor
+type PrimitiveValueTokenizer interface {
+	Tokenizer
+	PrimitiveStateProcessor
 }
 
-// use a statemachine to route the state and handle the storage of the token value
+// for the base, only provides what `PrimitiveStateProcessor` needs
 type PrimitiveValueTokenStateBase struct {
-	stateMachine JzoneTokenizerStateMachine
+	stateMachine *TokenizerStateMachine
 }
 
-var _ JzonePrimitiveStateProcessor = &PrimitiveValueTokenStateBase{}
+var _ PrimitiveStateProcessor = &PrimitiveValueTokenStateBase{}
 
-func NewPrimitiveValueTokenStateBase(sm JzoneTokenizerStateMachine) PrimitiveValueTokenStateBase {
+func NewPrimitiveValueTokenStateBase(sm *TokenizerStateMachine) PrimitiveValueTokenStateBase {
 	return PrimitiveValueTokenStateBase{
 		stateMachine: sm,
 	}
 }
 
-// our state machine construct the AST on the fly, therefore we can use the AST for routing when after dealing with value
+// state machine construct the AST on the fly, use the AST for state change after producing a primivite value
 func (i *PrimitiveValueTokenStateBase) switchState() error {
 
 	if err := i.stateMachine.SwitchToLatestState(); err != nil {
@@ -60,7 +57,7 @@ func (i *PrimitiveValueTokenStateBase) switchState() error {
 	return nil
 }
 
-// it will also handle the store of the value, insert into the correct location in the AST with its corresponding StateMode(providing the meta information)
+// it will also handle the store of the value to update the AST
 func (i *PrimitiveValueTokenStateBase) storeTokenValue(mode StateMode, value interface{}) error {
-	return i.stateMachine.RecordSyntaxValue(mode, value)
+	return i.stateMachine.RecordStateValue(mode, value)
 }
