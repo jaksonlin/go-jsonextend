@@ -1,8 +1,13 @@
 package golang
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 
+	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/interpreter"
 	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
@@ -15,7 +20,7 @@ type workingItem struct {
 type tokenProvider struct {
 	rootOut      reflect.Value
 	workingStack *util.Stack[*workingItem]
-	visited      map[uintptr]bool
+	visited      map[uintptr]bool // check visited when pop
 }
 
 func newTokenProvider(out interface{}) (*tokenProvider, error) {
@@ -36,17 +41,97 @@ func newTokenProvider(out interface{}) (*tokenProvider, error) {
 	}, nil
 }
 
-//var _ constructor.TokenProvider = &tokenProvider{}
+var _ constructor.TokenProvider = &tokenProvider{}
 
-func (t *tokenProvider) processArrayItem(item *workingItem) {
+func (t *tokenProvider) processArrayItem(item *workingItem) error {
 	len := item.reflectValue.Len()
 	// push the end tag
 	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACKET})
 	for i := len - 1; i >= 0; i -= 1 {
 		element := item.reflectValue.Index(i)
 		theTokenType := token.GetTokenTypeByReflection(&element)
+		if theTokenType == token.TOKEN_UNKNOWN {
+			return ErrorInvalidTypeOnExportedField
+		}
 		t.workingStack.Push(&workingItem{reflectValue: element, tokenType: theTokenType})
 	}
+	return nil
+}
+
+// for json tag `string`, convert to json for primitive data type
+func (t *tokenProvider) parseJsonStringConfig(tokenType token.TokenType, value reflect.Value) error {
+	if tokenType == token.TOKEN_BOOLEAN || tokenType == token.TOKEN_NUMBER || tokenType == token.TOKEN_STRING {
+		astNode, err := ast.NodeFactory(ast.ConvertTokenTypeToNodeType(tokenType), value.Interface())
+		if err != nil {
+			return err
+		}
+		payload, err := interpreter.InterpretAST(astNode, nil)
+		if err != nil {
+			return err
+		}
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(payload), tokenType: token.TOKEN_STRING})
+		return nil
+	} else {
+		return ErrorStringConfigTypeInvalid
+	}
+}
+
+func (t *tokenProvider) parseJsonFieldInfo(jsonTagFieldName string, defaultFieldName string) error {
+	fieldName := strings.TrimSpace(jsonTagFieldName)
+	if len(fieldName) == 0 {
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(defaultFieldName), tokenType: token.TOKEN_STRING})
+	} else {
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(fieldName), tokenType: token.TOKEN_STRING})
+	}
+	return nil
+}
+
+func (t *tokenProvider) parseJsonTag(defaultFieldName, jsonTag string, valueTokenType token.TokenType, value reflect.Value) error {
+	if jsonTag == "-" {
+		return nil
+	}
+	jsonTagConfig := strings.SplitN(jsonTag, ",", 2)
+	if len(jsonTagConfig) == 0 {
+		return ErrorInvalidJsonTag
+	}
+	if len(jsonTagConfig) == 1 {
+		t.workingStack.Push(&workingItem{reflectValue: value, tokenType: valueTokenType})
+	} else {
+		fieldOption := strings.TrimSpace(jsonTagConfig[1])
+		if fieldOption == "omitempty" && value.IsZero() {
+			return nil
+		}
+		// set the value first
+		if fieldOption == "string" {
+			err := t.parseJsonStringConfig(valueTokenType, value)
+			if err != nil {
+				return err
+			}
+		} else {
+			t.workingStack.Push(&workingItem{reflectValue: value, tokenType: valueTokenType})
+		}
+	}
+	return t.parseJsonFieldInfo(jsonTagConfig[0], defaultFieldName)
+}
+
+func (t *tokenProvider) processStructField(field reflect.StructField, element reflect.Value) error {
+	valueTokenType := token.GetTokenTypeByReflection(&element)
+	if valueTokenType == token.TOKEN_UNKNOWN {
+		return ErrorInvalidTypeOnExportedField
+	}
+
+	jsonTag, ok := field.Tag.Lookup("json")
+	if !ok {
+		// in stack value first then key
+		t.workingStack.Push(&workingItem{reflectValue: element, tokenType: valueTokenType})
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(field.Name), tokenType: token.TOKEN_STRING})
+	} else {
+		err := t.parseJsonTag(field.Name, jsonTag, valueTokenType, element)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
@@ -61,13 +146,14 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 			field := item.Type().Field(i)
 			if field.Anonymous {
 				s.Push(item.Field(i))
+				continue
 			}
 			if field.IsExported() {
-				element := item.Index(i)
-				theTokenType := token.GetTokenTypeByReflection(&element)
-				// in stack value first then key
-				t.workingStack.Push(&workingItem{reflectValue: element, tokenType: theTokenType})
-				t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(field.Name), tokenType: token.TOKEN_STRING})
+				element := item.Field(i)
+				err = t.processStructField(field, element)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -79,6 +165,9 @@ func (t *tokenProvider) processMapItem(item *workingItem) error {
 	for _, key := range item.reflectValue.MapKeys() {
 		mapValue := item.reflectValue.MapIndex(key)
 		valueTokenType := token.GetTokenTypeByReflection(&mapValue)
+		if valueTokenType == token.TOKEN_UNKNOWN {
+			return ErrorInvalidTypeOnExportedField
+		}
 		t.workingStack.Push(&workingItem{reflectValue: mapValue, tokenType: valueTokenType})
 		keyTokenType := token.GetTokenTypeByReflection(&key)
 		if keyTokenType == token.TOKEN_NUMBER {
@@ -120,46 +209,91 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 	if err != nil {
 		return token.TOKEN_DUMMY, err
 	}
+	if item.tokenType == token.TOKEN_NULL {
+		return token.TOKEN_NULL, nil
+	}
 
-	// deferences any pointer
-	if item.tokenType != token.TOKEN_NULL {
-		for item.reflectValue.Kind() == reflect.Pointer {
-			addr := getMemoryAddress(item.reflectValue)
-			if _, ok := t.visited[addr]; ok {
-				return token.TOKEN_DUMMY, ErrorCyclicAccess
-			} else {
-				t.visited[addr] = true
-			}
-			item.reflectValue = item.reflectValue.Elem()
+	for item.reflectValue.Kind() == reflect.Pointer {
+		addr := getMemoryAddress(item.reflectValue)
+		if _, ok := t.visited[addr]; ok {
+			return token.TOKEN_DUMMY, ErrorCyclicAccess
+		} else {
+			t.visited[addr] = true
+		}
+		item.reflectValue = item.reflectValue.Elem()
+	}
+	if item.reflectValue.CanAddr() {
+		addr := getMemoryAddress(item.reflectValue)
+		if _, ok := t.visited[addr]; ok {
+			return token.TOKEN_DUMMY, ErrorCyclicAccess
+		} else {
+			t.visited[addr] = true
 		}
 	}
-	addr := getMemoryAddress(item.reflectValue)
-	if _, ok := t.visited[addr]; ok {
-		return token.TOKEN_DUMMY, ErrorCyclicAccess
-	} else {
-		t.visited[addr] = true
-	}
+
 	switch item.tokenType {
 	case token.TOKEN_LEFT_BRACKET:
-		t.processArrayItem(item)
 		t.workingStack.Pop()
+		t.processArrayItem(item)
 		return item.tokenType, nil
 	case token.TOKEN_LEFT_BRACE:
+		t.workingStack.Pop()
 		err := t.processObjectItem(item)
 		if err != nil {
 			return token.TOKEN_DUMMY, err
 		}
-		t.workingStack.Pop()
 		return item.tokenType, nil
 	default:
-		// they will be pop when ReadXXX is requested, and we have already marked them visit
+		// for primitives, they will be pop when ReadXXX is requested, and we have already marked them visit
 		return item.tokenType, nil
 	}
 
 }
 
 func (t *tokenProvider) ReadNull() error {
+	_, err := t.workingStack.Pop()
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+func (t *tokenProvider) ReadBool() (bool, error) {
+	item, err := t.workingStack.Pop()
+	if err != nil {
+		return false, err
+	}
+	val := item.reflectValue.Bool()
+	return val, nil
+}
 
+func (t *tokenProvider) ReadString() ([]byte, error) {
+	item, err := t.workingStack.Pop()
+	if err != nil {
+		return nil, err
+	}
+	val := item.reflectValue.String()
+	// use go standard
+	v, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func (t *tokenProvider) ReadNumber() (float64, error) {
+	item, err := t.workingStack.Pop()
+	if err != nil {
+		return 0.0, err
+	}
+	val, err := convertNumberBaseOnKind(item.reflectValue)
+	if err != nil {
+		return 0.0, err
+	}
+	return val, nil
+}
+
+func (t *tokenProvider) ReadVariable() ([]byte, error) {
+	// no golang datatype corresponding to variable now, maybe we can extend this later through tag or plugin
+	return nil, nil
 }

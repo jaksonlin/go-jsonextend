@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -66,15 +67,15 @@ func (s *standardVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
 
 func (s *standardVisitor) VisitBooleanNode(node *ast.JsonBooleanNode) error {
 	if node.Value {
-		s.sb.Write(trueBytes)
+		s.sb.Write(token.TrueBytes)
 	} else {
-		s.sb.Write(falseBytes)
+		s.sb.Write(token.FalseBytes)
 	}
 	return s.WriteSymbol()
 }
 
 func (s *standardVisitor) VisitNullNode(node *ast.JsonNullNode) error {
-	s.sb.Write(nullBytes)
+	s.sb.Write(token.NullBytes)
 	return s.WriteSymbol()
 }
 

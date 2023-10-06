@@ -5,12 +5,21 @@ import (
 
 	"github.com/jaksonlin/go-jsonextend/constructor"
 	"github.com/jaksonlin/go-jsonextend/constructor/bytebase"
+	"github.com/jaksonlin/go-jsonextend/constructor/golang"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
 func NewTokenizerStateMachineFromIOReader(reader io.Reader) *TokenizerStateMachine {
 	astMan := bytebase.NewASTByteBaseBuilder(reader)
 	return newTokenizerStateMachine(astMan)
+}
+
+func NewTokenizerStateMachineFromGoData(obj interface{}) (*TokenizerStateMachine, error) {
+	astMan, err := golang.NewASTGolangBaseBuilder(obj)
+	if err != nil {
+		return nil, err
+	}
+	return newTokenizerStateMachine(astMan), nil
 }
 
 func newTokenizerStateMachine(builder constructor.ASTBuilder) *TokenizerStateMachine {

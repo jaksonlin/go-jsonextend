@@ -3,28 +3,15 @@ package tokenizer_test
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"os"
 	"runtime/pprof"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jaksonlin/go-jsonextend/tokenizer"
 
-	"net/http"
 	_ "net/http/pprof"
 )
-
-func TestMain(m *testing.M) {
-
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-	time.Sleep(time.Second) // Give some time for the server to start
-
-	os.Exit(m.Run())
-}
 
 func BenchmarkMyJsonE(b *testing.B) {
 	cpuFile, err := os.Create("cpu.pprof")

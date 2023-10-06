@@ -6,6 +6,7 @@ import (
 
 	"github.com/jaksonlin/go-jsonextend/interpreter"
 	"github.com/jaksonlin/go-jsonextend/tokenizer"
+	"github.com/jaksonlin/go-jsonextend/unmarshaler"
 )
 
 func Parse(reader io.Reader, variables map[string]interface{}) ([]byte, error) {
@@ -31,5 +32,21 @@ func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface
 		return errors.New("invalid json")
 	}
 	ast := sm.GetAST()
-	return interpreter.UnmarshallAST(ast, variables, out)
+	return unmarshaler.UnmarshallAST(ast, variables, out)
+}
+
+func Marshal(v interface{}) ([]byte, error) {
+	sm, err := tokenizer.NewTokenizerStateMachineFromGoData(v)
+	if err != nil {
+		return nil, err
+	}
+	err = sm.ProcessData()
+	if err != nil {
+		return nil, err
+	}
+	if sm.GetASTBuilder().HasOpenElements() {
+		return nil, errors.New("invalid object")
+	}
+	ast := sm.GetAST()
+	return interpreter.InterpretAST(ast, nil)
 }

@@ -71,3 +71,9 @@ func GetTokenTypeByReflection(v *reflect.Value) TokenType {
 		return TOKEN_UNKNOWN
 	}
 }
+
+var (
+	NullBytes  []byte = []byte("null")
+	FalseBytes []byte = []byte("false")
+	TrueBytes  []byte = []byte("true")
+)

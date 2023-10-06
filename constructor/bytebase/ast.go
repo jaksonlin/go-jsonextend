@@ -21,7 +21,7 @@ func newASTConstructor() *astByteBaseConstructor {
 }
 
 // when a json symbol is read, push it to syntax checker and construct the AST stack elements (as described in ast.go)
-func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType, currentOffset int, lastReadLength int) error {
+func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 	//routing base on symbol
 	switch b {
 	case token.TOKEN_LEFT_BRACE:
@@ -37,7 +37,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType, currentOf
 		if err != nil {
 			return err
 		}
-		err = i.ast.EncloseLatestElements(currentOffset)
+		err = i.ast.EncloseLatestElements()
 		if err != nil {
 			return err
 		}
@@ -48,7 +48,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType, currentOf
 		if err != nil {
 			return err
 		}
-		err = i.ast.EncloseLatestElements(currentOffset)
+		err = i.ast.EncloseLatestElements()
 		if err != nil {
 			return err
 		}

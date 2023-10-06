@@ -1,10 +1,11 @@
-package interpreter_test
+package unmarshaler_test
 
 import (
 	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -519,4 +520,65 @@ func TestMapKey(t *testing.T) {
 		t.FailNow()
 	}
 
+}
+
+func TestEmbedTag(t *testing.T) {
+	type apple struct {
+		Name string `json:"apple_name"`
+		Age  int
+	}
+	type banana struct {
+		apple
+		Name2 string `json:"apple_name"`
+		Age2  int
+	}
+	var b banana = banana{
+		apple: apple{
+			Name: "Pipe", Age: 100,
+		},
+		Name2: "OWW",
+		Age2:  111,
+	}
+	data, _ := json.Marshal(b)
+	fmt.Println(data)
+}
+func TestEmbedTag2(t *testing.T) {
+
+	type banana struct {
+		Name2 string `json:"apple_name"`
+		Age2  int
+		Ch    chan int
+	}
+	var b banana = banana{
+		Name2: "OWW",
+		Age2:  111,
+		Ch:    make(chan int),
+	}
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println(data)
+}
+func TestArrayElement(t *testing.T) {
+	b := []interface{}{1, 2, 3, make(chan int), 4, 5}
+
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println(data)
+}
+func TestBytesString(t *testing.T) {
+	f := "abc"
+	a := reflect.ValueOf(f)
+	data := a.String()
+
+	fmt.Println(data)
+}
+
+func TestConfigExtract(t *testing.T) {
+	config := ","
+	s := strings.SplitN(config, ",", 2)
+	println(len(s))
 }

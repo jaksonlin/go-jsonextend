@@ -3,6 +3,7 @@ package ast
 import (
 	"encoding/base64"
 
+	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -26,7 +27,26 @@ const (
 	AST_NODE_UNDEFINED     AST_NODETYPE = 210
 )
 
-func nodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
+func ConvertTokenTypeToNodeType(t token.TokenType) AST_NODETYPE {
+	switch t {
+	case token.TOKEN_BOOLEAN:
+		return AST_NUMBER
+	case token.TOKEN_STRING:
+		return AST_STRING
+	case token.TOKEN_NUMBER:
+		return AST_NUMBER
+	case token.TOKEN_NULL:
+		return AST_NULL
+	case token.TOKEN_VARIABLE:
+		return AST_VARIABLE
+	case token.TOKEN_STRING_WITH_VARIABLE:
+		return AST_STRING_VARIABLE
+	default:
+		return AST_NODE_UNDEFINED
+	}
+}
+
+func NodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 
 	switch t {
 	case AST_ARRAY:

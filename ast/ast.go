@@ -46,7 +46,7 @@ func (i *JsonextAST) GetAST() JsonNode {
 }
 
 func (i *JsonextAST) CreateRootNode(t AST_NODETYPE, value interface{}) error {
-	n, err := nodeFactory(t, value)
+	n, err := NodeFactory(t, value)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (i *JsonextAST) CreateNewASTNode(t AST_NODETYPE, value interface{}) error {
 }
 
 func (i *JsonextAST) CreateNewNodeForArrayObject(owner *JsonArrayNode, t AST_NODETYPE, value interface{}) error {
-	n, err := nodeFactory(t, value)
+	n, err := NodeFactory(t, value)
 	if err != nil {
 		return err
 	}
@@ -105,11 +105,11 @@ func (i *JsonextAST) CreateNewNodeForArrayObject(owner *JsonArrayNode, t AST_NOD
 }
 
 func (i *JsonextAST) CreateNewNodeForObject(owner *JsonObjectNode, t AST_NODETYPE, value interface{}) error {
-	keyNode, err := nodeFactory(t, value)
+	keyNode, err := NodeFactory(t, value)
 	if err != nil {
 		return err
 	}
-	n, err := nodeFactory(AST_KVPAIR, keyNode)
+	n, err := NodeFactory(AST_KVPAIR, keyNode)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (i *JsonextAST) CreateNewNodeForObject(owner *JsonObjectNode, t AST_NODETYP
 
 func (i *JsonextAST) CreateValueNodeForKVPairs(owner *JsonKeyValuePairNode, t AST_NODETYPE, value interface{}) error {
 
-	n, err := nodeFactory(t, value)
+	n, err := NodeFactory(t, value)
 	if err != nil {
 		return err
 	}
@@ -160,14 +160,14 @@ func (i *JsonextAST) FinlizeKVPair() error {
 	return nil
 }
 
-func (i *JsonextAST) EncloseLatestElements(currentOffset int) error {
+func (i *JsonextAST) EncloseLatestElements() error {
 
 	itemToFinalize, err := i.astTrace.Pop()
 	if err == util.ErrorEndOfStack {
 		i.state = AST_STATE_FINISHED
 		return nil
 	}
-	err = i.StoreFinlizedItemToOwner(itemToFinalize, currentOffset)
+	err = i.StoreFinlizedItemToOwner(itemToFinalize)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (i *JsonextAST) TopElementType() (AST_NODETYPE, error) {
 	return t.GetNodeType(), nil
 }
 
-func (i *JsonextAST) StoreFinlizedItemToOwner(itemToFinalize JsonNode, currentOffset int) error {
+func (i *JsonextAST) StoreFinlizedItemToOwner(itemToFinalize JsonNode) error {
 	nodeType := itemToFinalize.GetNodeType()
 	switch nodeType {
 	case AST_OBJECT: // item can only be value of kv or element of array

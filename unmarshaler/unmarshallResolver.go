@@ -1,10 +1,12 @@
-package interpreter
+package unmarshaler
 
 import (
 	"reflect"
 	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/interpreter"
+	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -356,7 +358,7 @@ func (resolver *unmarshallResolver) resolveByCustomizeObjectUnmarshal(node ast.J
 
 	unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
 
-	payload, err := InterpretAST(node, resolver.options.variables)
+	payload, err := interpreter.InterpretAST(node, resolver.options.variables)
 	if err != nil {
 		return err
 	}
@@ -424,9 +426,9 @@ func (resolver *unmarshallResolver) VisitObjectNode(node *ast.JsonObjectNode) er
 func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) error {
 	if resolver.hasUnmarshaller {
 		if node.Value {
-			return resolver.resolveByCustomizePrimitiveUnmarshal(trueBytes)
+			return resolver.resolveByCustomizePrimitiveUnmarshal(token.TrueBytes)
 		} else {
-			return resolver.resolveByCustomizePrimitiveUnmarshal(falseBytes)
+			return resolver.resolveByCustomizePrimitiveUnmarshal(token.FalseBytes)
 		}
 	}
 	resolver.setValue(node.Value)
@@ -436,7 +438,7 @@ func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) 
 func (resolver *unmarshallResolver) VisitNullNode(node *ast.JsonNullNode) error {
 	if resolver.hasUnmarshaller {
 		// fast unmarshal instead of using interpreter for primitive values
-		return resolver.resolveByCustomizePrimitiveUnmarshal(nullBytes)
+		return resolver.resolveByCustomizePrimitiveUnmarshal(token.NullBytes)
 	}
 	resolver.setValue(node.Value)
 	return resolver.resolve()

@@ -1,4 +1,4 @@
-package interpreter_test
+package unmarshaler_test
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jaksonlin/go-jsonextend/interpreter"
 	"github.com/jaksonlin/go-jsonextend/tokenizer"
+	"github.com/jaksonlin/go-jsonextend/unmarshaler"
 )
 
 func TestAssignThingsPrimitives(t *testing.T) {
@@ -40,7 +40,7 @@ func TestAssignThingsPrimitives(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 test1
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -94,7 +94,7 @@ func TestAssignThingsPrimitivesMapBasic(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]int
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -137,7 +137,7 @@ func TestAssignThingsPrimitivesMapStructKeyBasic(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -180,7 +180,7 @@ func TestAssignThingsPrimitivesMapPtrStructKeyBasic(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -222,7 +222,7 @@ func TestAssignThingsPrimitivesMapStructKey(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[int]someTest
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -265,7 +265,7 @@ func TestAssignThingsPrimitivesMapPtrStructKey(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -308,7 +308,7 @@ func TestAssignThingsPrimitivesMapInterface(t *testing.T) {
 		t.FailNow()
 	}
 	var someTest1 map[string]interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -373,7 +373,7 @@ func TestAssignThingsPrimitivesMapInterfaceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -439,7 +439,7 @@ func TestAssignThingsPrimitivesMapInterfaceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -503,7 +503,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfaceRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -567,7 +567,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointerRoot(t *testing.T) 
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -634,7 +634,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointersRoot(t *testing.T)
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = interpreter.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -690,7 +690,7 @@ func TestAssignThingsPrimitivesMapIntInterface(t *testing.T) {
 		t.FailNow()
 	}
 	var someTest1 map[int]interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -740,7 +740,7 @@ func TestAssignThingsPrimitivesMapBoolInterface(t *testing.T) {
 		t.FailNow()
 	}
 	var someTest1 map[uint8]interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -788,7 +788,7 @@ func TestAssignThingsPrimitivesInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -851,7 +851,7 @@ func TestAssignThingsPrimitivesInInterfaceRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -915,7 +915,7 @@ func TestAssignThingsPrimitivesInPointerInterfaceRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -981,7 +981,7 @@ func TestAssignThingsPrimitivesInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1044,7 +1044,7 @@ func TestAssignThingsPrimitivesInNestedPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1118,7 +1118,7 @@ func TestAssignThingsPrimitivesInNestedStructRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1188,7 +1188,7 @@ func TestAssignThingsPrimitivePointers(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 test1
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1261,7 +1261,7 @@ func TestAssignThingsPrimitivePointersInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTestRoot1 testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTestRoot1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTestRoot1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1335,7 +1335,7 @@ func TestAssignThingsPrimitivePointersInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTestRoot1 testRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTestRoot1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTestRoot1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1387,7 +1387,7 @@ func TestAssignThingsPrimitiveSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []int
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1422,7 +1422,7 @@ func TestAssignThingsStructElementSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []someTest
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1456,7 +1456,7 @@ func TestAssignThingsStructPtrElementSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []someTest
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1491,7 +1491,7 @@ func TestAssignThingsStructInterfaceElementSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1539,7 +1539,7 @@ func TestAssignThingsPrimitiveSliceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1593,7 +1593,7 @@ func TestAssignThingsNonePrimitiveSliceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1661,7 +1661,7 @@ func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1689,7 +1689,7 @@ func TestAssignThingsSliceWithInterfaceElement(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1723,7 +1723,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1757,7 +1757,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1800,7 +1800,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRootAndPointerValue(t *test
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1845,7 +1845,7 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]int
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1881,7 +1881,7 @@ func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [4]interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1920,7 +1920,7 @@ func TestAssignThingsPrimitiveArrayInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1959,7 +1959,7 @@ func TestAssignThingsPrimitiveArrayInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1993,7 +1993,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2027,7 +2027,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2067,7 +2067,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRootAndPointerValue(t *test
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2107,7 +2107,7 @@ func TestAssignThingsPrimitiveArraySliceCrossOver(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []int
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2140,7 +2140,7 @@ func TestAssignThingsPrimitiveSliceArrayCrossOver(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]int
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2179,7 +2179,7 @@ func TestAssignThingsPrimitiveArrayPointerValues(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]*int
-	err = interpreter.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2245,7 +2245,7 @@ func TestNestedPointerResolve(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 *********int
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2277,7 +2277,7 @@ func TestBareStruct(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 someStruct
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2307,7 +2307,7 @@ func TestPtrStruct(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 *someStruct
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2352,7 +2352,7 @@ func TestCustomizeType(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 someStruct
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2411,7 +2411,7 @@ func TestMapSliceType(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 []map[string][]interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2451,7 +2451,7 @@ func TestEmptyObject(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2483,7 +2483,7 @@ func TestEmptySlice(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2516,7 +2516,7 @@ func TestEmptyArray(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2541,7 +2541,7 @@ func TestInterfaceNil(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 interface{}
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2575,7 +2575,7 @@ func TestPtrSliceNilCaseInMap(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*[]int
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2613,7 +2613,7 @@ func TestPtrMapNilCaseInMap(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*map[int]int
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2651,7 +2651,7 @@ func TestPtrSliceNilCaseInSlice(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 []*[]int
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2693,7 +2693,7 @@ func TestSliceOfPtrToCollections(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 []*[]someStruct
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2732,7 +2732,7 @@ func TestInterfaceNilOnMapInterface(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*[]int
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2761,7 +2761,7 @@ func TestEmptyString(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 string
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2785,7 +2785,7 @@ func TestString(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 string
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2810,7 +2810,7 @@ func TestBool(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 bool
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2837,7 +2837,7 @@ func TestNumber(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 int
-	err = interpreter.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2936,7 +2936,7 @@ func TestFinalExam(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 SomeStruct1
-	err = interpreter.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3111,7 +3111,7 @@ func TestVariable(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 map[string]interface{}
-	err = interpreter.UnmarshallAST(node, variables, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, variables, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3174,7 +3174,7 @@ func TestFieldByTag(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3229,7 +3229,7 @@ func TestEmbeddingFields(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver newTest
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3283,7 +3283,7 @@ func TestCusomUnmarshal(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3324,7 +3324,7 @@ func TestCusomUnmarshalSlice(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3362,7 +3362,7 @@ func TestCusomUnmarshalMap(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3393,7 +3393,7 @@ func TestCusomUnmarshalMapNonePointer(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3432,7 +3432,7 @@ func TestCusomUnmarshalStruct(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver myUnmarshalstruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3467,7 +3467,7 @@ func TestCusomUnmarshalStructInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3504,7 +3504,7 @@ func TestCusomUnmarshalStructInStructPointerField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3547,7 +3547,7 @@ func TestCusomUnmarshalStringInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3577,7 +3577,7 @@ func TestCusomUnmarshalStringInStructPointerField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3614,7 +3614,7 @@ func TestCusomUnmarshalIntInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3644,7 +3644,7 @@ func TestCusomUnmarshalIntInStructPointerField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3682,7 +3682,7 @@ func TestCusomUnmarshalNullInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
