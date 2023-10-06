@@ -473,19 +473,22 @@ func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) er
 	if resolver.hasUnmarshaller {
 		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
 	}
-	resolver.setValue(node.GetValue())
+	valueToUnmarshal := util.RepairUTF8(string(node.GetValue()))
+	resolver.setValue(valueToUnmarshal)
 	return resolver.resolve()
 }
 
 func (resolver *unmarshallResolver) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
 	if resolver.hasUnmarshaller {
-		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
+		valueToUnmarshal := util.RepairUTF8(string(node.GetValue()))
+		return resolver.resolveByCustomizePrimitiveUnmarshal([]byte(valueToUnmarshal))
 	}
 	result, err := resolveStringVariable(node, resolver.options)
 	if err != nil {
 		return err
 	}
-	resolver.setValue(string(result))
+	valueToSet := util.RepairUTF8(string(result))
+	resolver.setValue(valueToSet)
 	return resolver.resolve()
 }
 
@@ -497,6 +500,11 @@ func (resolver *unmarshallResolver) VisitVariableNode(node *ast.JsonExtendedVari
 	if err != nil {
 		return err
 	}
-	resolver.setValue(result)
+	if result != nil && reflect.TypeOf(result).Kind() == reflect.String {
+		valueToSet := util.RepairUTF8(result.(string))
+		resolver.setValue(valueToSet)
+	} else {
+		resolver.setValue(result)
+	}
 	return resolver.resolve()
 }
