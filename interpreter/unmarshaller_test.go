@@ -3344,6 +3344,37 @@ func (m mymap) UnmarshalJSON(data []byte) error {
 func TestCusomUnmarshalMap(t *testing.T) {
 
 	type mydata struct {
+		T1 *mymap
+	}
+
+	var someItem mymap = mymap{"123": 1}
+	var test1 mydata = mydata{T1: &someItem}
+	data, _ := json.Marshal(test1)
+
+	var checker mymap = make(mymap)
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver mydata
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if (*myReceiver.T1)["abc"] != 123 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalMapNonePointer(t *testing.T) {
+
+	type mydata struct {
 		T1 mymap
 	}
 
@@ -3365,6 +3396,299 @@ func TestCusomUnmarshalMap(t *testing.T) {
 	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
 	if err != nil {
 		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.T1["abc"] != 123 {
+		t.FailNow()
+	}
+
+}
+
+type myUnmarshalstruct struct {
+	Name string
+	Age  int
+}
+
+var _ json.Unmarshaler = (*myUnmarshalstruct)(nil)
+
+func (m *myUnmarshalstruct) UnmarshalJSON(b []byte) error {
+	m.Name = string(b)
+	m.Age = 123
+	return nil
+}
+func TestCusomUnmarshalStruct(t *testing.T) {
+
+	var test1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
+	data, _ := json.Marshal(test1)
+
+	var checker myUnmarshalstruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver myUnmarshalstruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Name != checker.Name {
+		t.FailNow()
+	}
+	if myReceiver.Age != checker.Age {
+		t.FailNow()
+	}
+
+}
+
+func TestCusomUnmarshalStructInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 myUnmarshalstruct
+		Field2 int
+	}
+	var field1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
+	var test1 someStruct = someStruct{field1, 999}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1.Name != checker.Field1.Name {
+		t.FailNow()
+	}
+	if myReceiver.Field1.Age != 123 {
+		t.FailNow()
+	}
+	if myReceiver.Field2 != 999 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalStructInStructPointerField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myUnmarshalstruct
+		Field2 int
+	}
+	var field1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
+	var test1 someStruct = someStruct{&field1, 999}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1.Name != checker.Field1.Name {
+		t.FailNow()
+	}
+	if myReceiver.Field1.Age != 123 {
+		t.FailNow()
+	}
+	if myReceiver.Field2 != 999 {
+		t.FailNow()
+	}
+
+}
+
+type myString string
+
+func (m *myString) UnmarshalJSON(b []byte) error {
+	*m = myString(fmt.Sprintf("%s:%s", "abc", string(b)))
+	return nil
+}
+func TestCusomUnmarshalStringInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 myString // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myString = myString("123")
+	var test1 someStruct = someStruct{field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1 != checker.Field1 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalStringInStructPointerField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myString // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myString = myString("123")
+	var test1 someStruct = someStruct{&field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if *myReceiver.Field1 != *checker.Field1 {
+		t.FailNow()
+	}
+
+}
+
+type myNumber int
+
+func (m *myNumber) UnmarshalJSON(b []byte) error {
+	*m = myNumber(len(b))
+	return nil
+}
+func TestCusomUnmarshalIntInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 myNumber // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myNumber = myNumber(123)
+	var test1 someStruct = someStruct{field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Field1 != checker.Field1 {
+		t.FailNow()
+	}
+
+}
+func TestCusomUnmarshalIntInStructPointerField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myNumber // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var field1 myNumber = myNumber(123)
+	var test1 someStruct = someStruct{&field1}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if *myReceiver.Field1 != *checker.Field1 {
+		t.FailNow()
+	}
+
+}
+
+type myNil struct {
+	Age int
+}
+
+func (m *myNil) UnmarshalJSON(b []byte) error {
+	m.Age = len(b) * 10
+	return nil
+}
+func TestCusomUnmarshalNullInStructField(t *testing.T) {
+
+	type someStruct struct {
+		Field1 *myNil // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
+	}
+	var test1 someStruct = someStruct{nil}
+	data, _ := json.Marshal(test1)
+
+	var checker someStruct
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver someStruct
+	err = interpreter.UnmarshallAST(node, nil, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	// when a value is already nil, the unmarshaler won't help you to convert it to something not nil
+	if myReceiver.Field1 != checker.Field1 && myReceiver.Field1 != nil {
 		t.FailNow()
 	}
 

@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"reflect"
+	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
 	"github.com/jaksonlin/go-jsonextend/util"
@@ -351,31 +352,31 @@ func implementsUnmarshaler(t reflect.Type) bool {
 
 var _ ast.JsonVisitor = &unmarshallResolver{}
 
-func (resolver *unmarshallResolver) customizeUnmarshalJson(node *ast.JsonArrayNode) error {
+func (resolver *unmarshallResolver) resolveByCustomizeObjectUnmarshal(node ast.JsonNode) error {
 
 	unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
 
-	payload, err := Interpret(node, resolver.options.variables)
+	payload, err := InterpretAST(node, resolver.options.variables)
 	if err != nil {
 		return err
 	}
 	result := unmarshalMethod.Call([]reflect.Value{reflect.ValueOf(payload)})
-	if unmarshalErr, ok := result[0].Interface().(error); ok {
-		if unmarshalErr != nil {
-			return unmarshalErr
+	unmarshalError := result[0].Interface()
+	if unmarshalError == nil {
+		return resolver.resolve()
+	} else {
+		if err, ok := unmarshalError.(error); ok {
+			return err
+		} else {
+			return ErrorInvalidUnmarshalResult
 		}
 	}
-	return nil
-
 }
 
 func (resolver *unmarshallResolver) VisitArrayNode(node *ast.JsonArrayNode) error {
 	// fill the values in the reflection.Value
 	if resolver.hasUnmarshaller {
-		if err := resolver.customizeUnmarshalJson(node); err != nil {
-			return err
-		}
-		return resolver.resolve()
+		return resolver.resolveByCustomizeObjectUnmarshal(node)
 	}
 	for i := len(node.Value) - 1; i >= 0; i-- {
 		resolver, err := resolver.createArrayElementResolver(i, node.Value[i])
@@ -408,20 +409,7 @@ func (resolver *unmarshallResolver) VisitKeyValuePairNode(node *ast.JsonKeyValue
 
 func (resolver *unmarshallResolver) VisitObjectNode(node *ast.JsonObjectNode) error {
 	if resolver.hasUnmarshaller {
-		unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
-
-		payload, err := Interpret(node, resolver.options.variables)
-		if err != nil {
-			return err
-		}
-		result := unmarshalMethod.Call([]reflect.Value{reflect.ValueOf(payload)})
-		if unmarshalErr, ok := result[0].Interface().(error); ok {
-			if unmarshalErr != nil {
-				return unmarshalErr
-			}
-		}
-		return resolver.resolve()
-
+		return resolver.resolveByCustomizeObjectUnmarshal(node)
 	}
 	// fill the values in the reflection.Value
 	for i := len(node.Value) - 1; i >= 0; i-- {
@@ -434,22 +422,11 @@ func (resolver *unmarshallResolver) VisitObjectNode(node *ast.JsonObjectNode) er
 }
 
 func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) error {
-	if resolver.isPointerValue {
-		unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
-		if unmarshalMethod.IsValid() {
-			var payload []byte
-			if node.Value {
-				payload = []byte("true")
-			} else {
-				payload = []byte("false")
-			}
-			result := unmarshalMethod.Call([]reflect.Value{reflect.ValueOf(payload)})
-			if unmarshalErr, ok := result[0].Interface().(error); ok {
-				if unmarshalErr != nil {
-					return unmarshalErr
-				}
-			}
-			return resolver.resolve()
+	if resolver.hasUnmarshaller {
+		if node.Value {
+			return resolver.resolveByCustomizePrimitiveUnmarshal(trueBytes)
+		} else {
+			return resolver.resolveByCustomizePrimitiveUnmarshal(falseBytes)
 		}
 	}
 	resolver.setValue(node.Value)
@@ -457,22 +434,53 @@ func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) 
 }
 
 func (resolver *unmarshallResolver) VisitNullNode(node *ast.JsonNullNode) error {
+	if resolver.hasUnmarshaller {
+		// fast unmarshal instead of using interpreter for primitive values
+		return resolver.resolveByCustomizePrimitiveUnmarshal(nullBytes)
+	}
 	resolver.setValue(node.Value)
 	return resolver.resolve()
 }
 
 func (resolver *unmarshallResolver) VisitNumberNode(node *ast.JsonNumberNode) error {
+	if resolver.hasUnmarshaller {
+		// fast unmarshal instead of using interpreter for primitive values
+		numStr := strconv.FormatFloat(node.Value, 'f', -1, 64)
+		return resolver.resolveByCustomizePrimitiveUnmarshal([]byte(numStr))
+	}
 	realValue := resolver.convertNumberBaseOnKind(node.Value)
 	resolver.setValue(realValue)
 	return resolver.resolve()
 }
 
+// this is design to call the customize unmarshaler and `resolve` the resolver
+func (resolver *unmarshallResolver) resolveByCustomizePrimitiveUnmarshal(payload []byte) error {
+	// fast unmarshal instead of using interpreter for primitive values
+	unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
+	if unmarshalMethod.IsValid() {
+		result := unmarshalMethod.Call([]reflect.Value{reflect.ValueOf(payload)})
+		if unmarshalErr, ok := result[0].Interface().(error); ok {
+			if unmarshalErr != nil {
+				return unmarshalErr
+			}
+		}
+		return resolver.resolve()
+	}
+	return nil
+}
+
 func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) error {
+	if resolver.hasUnmarshaller {
+		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
+	}
 	resolver.setValue(node.GetValue())
 	return resolver.resolve()
 }
 
 func (resolver *unmarshallResolver) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
+	if resolver.hasUnmarshaller {
+		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
+	}
 	result, err := resolveStringVariable(node, resolver.options)
 	if err != nil {
 		return err
@@ -482,6 +490,9 @@ func (resolver *unmarshallResolver) VisitStringWithVariableNode(node *ast.JsonEx
 }
 
 func (resolver *unmarshallResolver) VisitVariableNode(node *ast.JsonExtendedVariableNode) error {
+	if resolver.hasUnmarshaller {
+		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
+	}
 	result, err := resolveVariable(node, resolver.options)
 	if err != nil {
 		return err
