@@ -61,6 +61,45 @@ if err != nil {
 
 ```
 
+### json unmarshaller with json.Unmarshaller interface
+
+```go
+type SomeStructWithUnmarshaller struct {
+    Field1 string
+    Field2 int
+    Field3 interface{}
+}
+
+func (s *SomeStructWithUnmarshaller) UnmarshalJSON(payload []byte) error {
+    s.Field1 = "hello world"
+    s.Field2 = 100
+    s.Field3 = payload
+    return nil
+}
+
+func TestUnmarshal4(t *testing.T) {
+    someData := "Field3 value"
+    data, _ := json.Marshal(someData)
+    var validator SomeStructWithUnmarshaller
+    err := jsonextend.Unmarshal(bytes.NewReader(data), nil, &validator)
+    if err != nil {
+        t.FailNow()
+    }
+    if validator.Field1 != "hello world" {
+        t.FailNow()
+    }
+    if validator.Field2 != 100 {
+        t.FailNow()
+    }
+
+    if !bytes.Equal(validator.Field3.([]byte), data) {
+        t.FailNow()
+    }
+
+}
+
+```
+
 ### Variable in string
 
 when a string contains `${variable}` pattern, it is considered as a `string with variable`, and the variable value will be replaced in the result. a string can contain multiple variables.
@@ -118,7 +157,7 @@ if err != nil {
 
 for i, v := range out.Field3.([]int) {
     if v != i+1 {
-   	    t.FailNow()
+           t.FailNow()
     }
 }
 ```

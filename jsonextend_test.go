@@ -148,3 +148,39 @@ func TestUnmarshal3(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+type SomeStructWithUnmarshaller struct {
+	Field1 string
+	Field2 int
+	Field3 interface{}
+}
+
+var _ json.Unmarshaler = (*SomeStructWithUnmarshaller)(nil)
+
+func (s *SomeStructWithUnmarshaller) UnmarshalJSON(payload []byte) error {
+	s.Field1 = "hello world"
+	s.Field2 = 100
+	s.Field3 = payload
+	return nil
+}
+
+func TestUnmarshal4(t *testing.T) {
+	someData := "Field3 value"
+	data, _ := json.Marshal(someData)
+	var validator SomeStructWithUnmarshaller
+	err := jsonextend.Unmarshal(bytes.NewReader(data), nil, &validator)
+	if err != nil {
+		t.FailNow()
+	}
+	if validator.Field1 != "hello world" {
+		t.FailNow()
+	}
+	if validator.Field2 != 100 {
+		t.FailNow()
+	}
+
+	if !bytes.Equal(validator.Field3.([]byte), data) {
+		t.FailNow()
+	}
+
+}
