@@ -554,20 +554,18 @@ func TestEmbedTag2(t *testing.T) {
 		Age2:  111,
 		Ch:    make(chan int),
 	}
-	data, err := json.Marshal(b)
-	if err != nil {
+	_, err := json.Marshal(b)
+	if err == nil {
 		t.FailNow()
 	}
-	fmt.Println(data)
 }
 func TestArrayElement(t *testing.T) {
 	b := []interface{}{1, 2, 3, make(chan int), 4, 5}
 
-	data, err := json.Marshal(b)
-	if err != nil {
+	_, err := json.Marshal(b)
+	if err == nil {
 		t.FailNow()
 	}
-	fmt.Println(data)
 }
 func TestBytesString(t *testing.T) {
 	f := "abc"
@@ -581,4 +579,22 @@ func TestConfigExtract(t *testing.T) {
 	config := ","
 	s := strings.SplitN(config, ",", 2)
 	println(len(s))
+}
+
+func TestFlag(t *testing.T) {
+	type flag uint32
+	const (
+		flagKindWidth        = 5 // there are 27 kinds
+		flagKindMask    flag = 1<<flagKindWidth - 1
+		flagStickyRO    flag = 1 << 5
+		flagEmbedRO     flag = 1 << 6
+		flagIndir       flag = 1 << 7
+		flagAddr        flag = 1 << 8
+		flagMethod      flag = 1 << 9
+		flagMethodShift      = 10
+		flagRO          flag = flagStickyRO | flagEmbedRO
+	)
+	//var testFlag flag = 0b0010101100
+	fmt.Printf("%b", flagKindMask)
+
 }

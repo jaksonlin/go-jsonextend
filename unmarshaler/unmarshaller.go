@@ -23,7 +23,7 @@ func (resolver *unmarshallResolver) processKVKeyNode(node ast.JsonStringValueNod
 }
 
 func (resolver *unmarshallResolver) getFieldByTag(objKey string) (reflect.Value, error) {
-	resolver.getAllFields()
+	resolver.collectAllFields()
 	fieldInfo, ok := resolver.fields[objKey]
 	if !ok {
 		return reflect.Value{}, NewErrorFieldNotValid(objKey)
@@ -107,14 +107,14 @@ func (resolver *unmarshallResolver) process() error {
 	return node.Visit(resolver)
 }
 
-func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out interface{}) error {
+func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshaler ast.MarshalerFunc, out interface{}) error {
 	// deep first traverse the AST
 	valueItem := reflect.ValueOf(out)
 	if valueItem.Kind() != reflect.Pointer || valueItem.IsNil() {
 		return ErrOutNotPointer
 	}
 
-	options := NewUnMarshallOptions(variables)
+	options := NewUnMarshallOptions(variables, marshaler)
 	traverseStack := options.resolverStack
 	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options)
 	if err != nil {

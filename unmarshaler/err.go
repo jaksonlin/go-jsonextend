@@ -8,7 +8,7 @@ import (
 const (
 	ExpectingStructFindOthers = "expecting struct but find %s"
 	VariableNotFound          = "variable value for %s not found"
-	FieldNotValid             = "field not valid %s"
+	FieldNotValid             = "field not exist %s"
 	KVKindNotMatch            = "expect %s as key but value is not :%#v"
 )
 
@@ -21,10 +21,19 @@ var (
 	ErrorPrimitiveTypeCannotResolveDependency          = errors.New("pritimive type cannot resolve dependency")
 	ErrorInternalExpectingArrayLikeObject              = errors.New("expecting array like object but find others")
 	ErrorInvalidUnmarshalResult                        = errors.New("invalid unmarshal result")
+	ErrorInvalidTag                                    = errors.New("invalid json tag")
 )
 
-func NewErrorFieldNotValid(field string) error {
-	return fmt.Errorf(FieldNotValid, field)
+type ErrorFieldNotExist struct {
+	field string
+}
+
+func (e ErrorFieldNotExist) Error() string {
+	return fmt.Sprintf(FieldNotValid, e.field)
+}
+
+func NewErrorFieldNotValid(field string) ErrorFieldNotExist {
+	return ErrorFieldNotExist{field: field}
 }
 func NewErrorInternalExpectingStructButFindOthers(kind string) error {
 	return fmt.Errorf(ExpectingStructFindOthers, kind)

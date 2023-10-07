@@ -1,6 +1,7 @@
 package unmarshaler
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 
@@ -31,40 +32,18 @@ type unmarshallResolver struct {
 	hasUnmarshaller      bool
 }
 
-func (resolver *unmarshallResolver) getAllFields() {
+func (resolver *unmarshallResolver) collectAllFields() error {
 	if len(resolver.fields) > 0 {
-		return
+		return nil
 	}
-	resolver.fields = make(map[string]reflect.Value)
-	s := util.NewStack[reflect.Value]()
-	s.Push(resolver.ptrToActualValue.Elem())
 
-	for {
-		item, err := s.Pop()
-		if err != nil {
-			break
-		}
-		for i := 0; i < item.NumField(); i++ {
-			fieldType := item.Type().Field(i)
-
-			fieldValue := item.Field(i)
-			if fieldType.Anonymous {
-				s.Push(fieldValue)
-				continue
-			}
-			if !fieldType.IsExported() || !fieldValue.IsValid() || !fieldValue.CanSet() {
-				continue
-			}
-
-			resolver.fields[fieldType.Name] = fieldValue
-			jsonTag := fieldType.Tag.Get("json")
-			if jsonTag != "" {
-				resolver.fields[jsonTag] = fieldValue
-			}
-
-		}
-
+	result := util.FlattenJsonStruct(resolver.ptrToActualValue.Elem())
+	if result == nil {
+		return NewErrorInternalExpectingStructButFindOthers(resolver.ptrToActualValue.Elem().Kind().String())
 	}
+	resolver.fields = result
+	return nil
+
 }
 
 // a story for align to the go's json unmarshall is that, when the field is a pointer, and it points to a nil value, the unmarshall will resolve to a `nil pointer` not `pointer to nil value`
@@ -358,7 +337,7 @@ func (resolver *unmarshallResolver) resolveByCustomizeObjectUnmarshal(node ast.J
 
 	unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
 
-	payload, err := interpreter.InterpretAST(node, resolver.options.variables)
+	payload, err := interpreter.InterpretAST(node, resolver.options.variables, resolver.options.marshaler)
 	if err != nil {
 		return err
 	}
@@ -401,6 +380,11 @@ func (resolver *unmarshallResolver) VisitKeyValuePairNode(node *ast.JsonKeyValue
 
 	newResolver, err := resolver.processKVValueNode(key, node.Value)
 	if err != nil {
+		var notFind ErrorFieldNotExist
+		if errors.As(err, &notFind) {
+			// pass this field
+			return nil
+		}
 		return err
 	}
 

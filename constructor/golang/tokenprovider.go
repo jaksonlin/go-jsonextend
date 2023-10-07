@@ -1,13 +1,10 @@
 package golang
 
 import (
-	"encoding/json"
 	"reflect"
 	"strings"
 
-	"github.com/jaksonlin/go-jsonextend/ast"
 	"github.com/jaksonlin/go-jsonextend/constructor"
-	"github.com/jaksonlin/go-jsonextend/interpreter"
 	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
@@ -61,11 +58,7 @@ func (t *tokenProvider) processArrayItem(item *workingItem) error {
 // for json tag `string`, convert to json for primitive data type
 func (t *tokenProvider) parseJsonStringConfig(tokenType token.TokenType, value reflect.Value) error {
 	if tokenType == token.TOKEN_BOOLEAN || tokenType == token.TOKEN_NUMBER || tokenType == token.TOKEN_STRING {
-		astNode, err := ast.NodeFactory(ast.ConvertTokenTypeToNodeType(tokenType), value.Interface())
-		if err != nil {
-			return err
-		}
-		payload, err := interpreter.InterpretAST(astNode, nil)
+		payload, err := util.EncodePrimitiveValue(value.Interface())
 		if err != nil {
 			return err
 		}
@@ -76,7 +69,7 @@ func (t *tokenProvider) parseJsonStringConfig(tokenType token.TokenType, value r
 	}
 }
 
-func (t *tokenProvider) parseJsonFieldInfo(jsonTagFieldName string, defaultFieldName string) error {
+func (t *tokenProvider) parseJsonFieldInfo(jsonTagFieldName string, defaultFieldName string, inUsedKey map[string]bool) error {
 	fieldName := strings.TrimSpace(jsonTagFieldName)
 	if len(fieldName) == 0 {
 		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(defaultFieldName), tokenType: token.TOKEN_STRING})
@@ -86,7 +79,7 @@ func (t *tokenProvider) parseJsonFieldInfo(jsonTagFieldName string, defaultField
 	return nil
 }
 
-func (t *tokenProvider) parseJsonTag(defaultFieldName, jsonTag string, valueTokenType token.TokenType, value reflect.Value) error {
+func (t *tokenProvider) parseJsonTag(defaultFieldName, jsonTag string, valueTokenType token.TokenType, value reflect.Value, inUsedKey map[string]bool) error {
 	if jsonTag == "-" {
 		return nil
 	}
@@ -111,10 +104,10 @@ func (t *tokenProvider) parseJsonTag(defaultFieldName, jsonTag string, valueToke
 			t.workingStack.Push(&workingItem{reflectValue: value, tokenType: valueTokenType})
 		}
 	}
-	return t.parseJsonFieldInfo(jsonTagConfig[0], defaultFieldName)
+	return t.parseJsonFieldInfo(jsonTagConfig[0], defaultFieldName, inUsedKey)
 }
 
-func (t *tokenProvider) processStructField(field reflect.StructField, element reflect.Value) error {
+func (t *tokenProvider) processStructField(field reflect.StructField, element reflect.Value, inUsedKey map[string]bool) error {
 	valueTokenType := token.GetTokenTypeByReflection(&element)
 	if valueTokenType == token.TOKEN_UNKNOWN {
 		return ErrorInvalidTypeOnExportedField
@@ -122,11 +115,12 @@ func (t *tokenProvider) processStructField(field reflect.StructField, element re
 
 	jsonTag, ok := field.Tag.Lookup("json")
 	if !ok {
+		inUsedKey[field.Name] = true
 		// in stack value first then key
 		t.workingStack.Push(&workingItem{reflectValue: element, tokenType: valueTokenType})
 		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(field.Name), tokenType: token.TOKEN_STRING})
 	} else {
-		err := t.parseJsonTag(field.Name, jsonTag, valueTokenType, element)
+		err := t.parseJsonTag(field.Name, jsonTag, valueTokenType, element, inUsedKey)
 		if err != nil {
 			return err
 		}
@@ -135,29 +129,16 @@ func (t *tokenProvider) processStructField(field reflect.StructField, element re
 }
 
 func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
-	s := util.NewStack[reflect.Value]()
-	s.Push(workItem.reflectValue)
-	for {
-		item, err := s.Pop()
-		if err != nil {
-			break
+	allFields := util.FlattenJsonStruct(workItem.reflectValue)
+	for key, val := range allFields {
+		valueTokenType := token.GetTokenTypeByReflection(&val)
+		if valueTokenType == token.TOKEN_UNKNOWN {
+			return ErrorInvalidTypeOnExportedField
 		}
-		for i := item.NumField() - 1; i >= 0; i -= 1 {
-			field := item.Type().Field(i)
-			if field.Anonymous {
-				s.Push(item.Field(i))
-				continue
-			}
-			if field.IsExported() {
-				element := item.Field(i)
-				err = t.processStructField(field, element)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
 
+		t.workingStack.Push(&workingItem{reflectValue: val, tokenType: valueTokenType})
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(key), tokenType: token.TOKEN_STRING})
+	}
 	return nil
 }
 
@@ -203,6 +184,18 @@ func (t *tokenProvider) processObjectItem(item *workingItem) error {
 
 }
 
+func (t *tokenProvider) detectCyclicAccess(item *workingItem) error {
+	if item.reflectValue.CanAddr() {
+		addr := getMemoryAddress(item.reflectValue)
+		if _, ok := t.visited[addr]; ok {
+			return ErrorCyclicAccess
+		} else {
+			t.visited[addr] = true
+		}
+	}
+	return nil
+}
+
 func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 
 	item, err := t.workingStack.Peek()
@@ -214,34 +207,31 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 	}
 
 	for item.reflectValue.Kind() == reflect.Pointer {
-		addr := getMemoryAddress(item.reflectValue)
-		if _, ok := t.visited[addr]; ok {
-			return token.TOKEN_DUMMY, ErrorCyclicAccess
-		} else {
-			t.visited[addr] = true
-		}
 		item.reflectValue = item.reflectValue.Elem()
-	}
-	if item.reflectValue.CanAddr() {
-		addr := getMemoryAddress(item.reflectValue)
-		if _, ok := t.visited[addr]; ok {
-			return token.TOKEN_DUMMY, ErrorCyclicAccess
-		} else {
-			t.visited[addr] = true
-		}
 	}
 
 	switch item.tokenType {
 	case token.TOKEN_LEFT_BRACKET:
+		if err := t.detectCyclicAccess(item); err != nil {
+			return token.TOKEN_DUMMY, err
+		}
 		t.workingStack.Pop()
 		t.processArrayItem(item)
 		return item.tokenType, nil
 	case token.TOKEN_LEFT_BRACE:
+		if err := t.detectCyclicAccess(item); err != nil {
+			return token.TOKEN_DUMMY, err
+		}
 		t.workingStack.Pop()
 		err := t.processObjectItem(item)
 		if err != nil {
 			return token.TOKEN_DUMMY, err
 		}
+		return item.tokenType, nil
+	case token.TOKEN_RIGHT_BRACE:
+		fallthrough
+	case token.TOKEN_RIGHT_BRACKET:
+		t.workingStack.Pop()
 		return item.tokenType, nil
 	default:
 		// for primitives, they will be pop when ReadXXX is requested, and we have already marked them visit
@@ -274,10 +264,7 @@ func (t *tokenProvider) ReadString() ([]byte, error) {
 	}
 	val := item.reflectValue.String()
 	// use go standard
-	v, err := json.Marshal(val)
-	if err != nil {
-		return nil, err
-	}
+	v := util.EncodeToJsonString(val)
 	return v, nil
 }
 

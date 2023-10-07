@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strconv"
 	"unicode/utf8"
-	"unsafe"
 )
 
 // string to number receiver
@@ -45,7 +44,8 @@ func getMemoryAddress(v reflect.Value) uintptr {
 	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		return v.Pointer()
 	case reflect.Interface:
-		return uintptr(unsafe.Pointer(v.UnsafeAddr()))
+		elem := v.Elem() // get the value from interface
+		return elem.UnsafeAddr()
 	default:
 		return v.UnsafeAddr()
 	}

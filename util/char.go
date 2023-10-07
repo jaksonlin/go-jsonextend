@@ -2,7 +2,9 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"regexp"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -41,4 +43,48 @@ func RepairUTF8(s string) string {
 	}
 
 	return string(repaired)
+}
+
+func GetFieldNameAndOptions(jsonTag string) (string, string) {
+	rs := strings.SplitN(jsonTag, ",", 2)
+
+	if len(rs) == 1 {
+		return rs[0], ""
+	}
+	if len(rs) == 2 {
+		return rs[0], rs[1]
+	}
+	return "", ""
+}
+
+// given non-ASCII UTF-8 strings encode it to json string align with RFC 7159
+func EncodeToJsonString(input string) []byte {
+	var buf bytes.Buffer
+	buf.WriteByte('"') // start the JSON string
+	for _, r := range input {
+		switch r {
+		case '"':
+			buf.WriteString(`\"`)
+		case '\\':
+			buf.WriteString(`\\`)
+		case '\b':
+			buf.WriteString(`\b`)
+		case '\f':
+			buf.WriteString(`\f`)
+		case '\n':
+			buf.WriteString(`\n`)
+		case '\r':
+			buf.WriteString(`\r`)
+		case '\t':
+			buf.WriteString(`\t`)
+		default:
+			if r < 0x20 {
+				buf.WriteString(fmt.Sprintf(`\u%04x`, r)) //convert the rune value to a 4-character hexadecimal string
+			} else {
+				buf.WriteRune(r)
+			}
+		}
+	}
+	buf.WriteByte('"') // end the JSON string
+	return buf.Bytes()
 }

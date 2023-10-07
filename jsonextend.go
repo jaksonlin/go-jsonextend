@@ -19,7 +19,7 @@ func Parse(reader io.Reader, variables map[string]interface{}) ([]byte, error) {
 		return nil, errors.New("invalid json")
 	}
 	ast := sm.GetAST()
-	return interpreter.PrettyInterpret(ast, variables)
+	return interpreter.PrettyInterpret(ast, variables, Marshal)
 }
 
 func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}) error {
@@ -32,10 +32,15 @@ func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface
 		return errors.New("invalid json")
 	}
 	ast := sm.GetAST()
-	return unmarshaler.UnmarshallAST(ast, variables, out)
+	return unmarshaler.UnmarshallAST(ast, variables, Marshal, out)
 }
 
-func Marshal(v interface{}) ([]byte, error) {
+const maxDepth = 4
+
+func marshal(v interface{}, depth int) ([]byte, error) {
+	if depth > maxDepth {
+		return nil, errors.New("recursion depth exceeded")
+	}
 	sm, err := tokenizer.NewTokenizerStateMachineFromGoData(v)
 	if err != nil {
 		return nil, err
@@ -48,5 +53,11 @@ func Marshal(v interface{}) ([]byte, error) {
 		return nil, errors.New("invalid object")
 	}
 	ast := sm.GetAST()
-	return interpreter.InterpretAST(ast, nil)
+	return interpreter.InterpretAST(ast, nil, func(v interface{}) ([]byte, error) {
+		return marshal(v, depth+1)
+	})
+}
+
+func Marshal(v interface{}) ([]byte, error) {
+	return marshal(v, 1)
 }

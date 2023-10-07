@@ -14,6 +14,8 @@ import (
 	"github.com/jaksonlin/go-jsonextend/unmarshaler"
 )
 
+var testMarshaler = func(v interface{}) ([]byte, error) { return json.Marshal(v) }
+
 func TestAssignThingsPrimitives(t *testing.T) {
 	type test1 struct {
 		Hello           string
@@ -26,7 +28,7 @@ func TestAssignThingsPrimitives(t *testing.T) {
 	}
 
 	t1 := test1{"Peter", 100.123, 100, true, false, nil, "1234"}
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 
 	var validator test1
@@ -40,7 +42,7 @@ func TestAssignThingsPrimitives(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 test1
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -78,7 +80,7 @@ func TestAssignThingsPrimitivesMapBasic(t *testing.T) {
 		"SomethingNotNil": 7,
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var validator map[string]int
 	err := json.Unmarshal(data, &validator)
@@ -94,7 +96,7 @@ func TestAssignThingsPrimitivesMapBasic(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]int
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -121,7 +123,7 @@ func TestAssignThingsPrimitivesMapStructKeyBasic(t *testing.T) {
 		"7": someTest{1},
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var validator map[string]someTest
 	err := json.Unmarshal(data, &validator)
@@ -137,7 +139,7 @@ func TestAssignThingsPrimitivesMapStructKeyBasic(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -164,7 +166,7 @@ func TestAssignThingsPrimitivesMapPtrStructKeyBasic(t *testing.T) {
 		"7": &someTest{1},
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var validator map[string]someTest
 	err := json.Unmarshal(data, &validator)
@@ -180,7 +182,7 @@ func TestAssignThingsPrimitivesMapPtrStructKeyBasic(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -206,7 +208,7 @@ func TestAssignThingsPrimitivesMapStructKey(t *testing.T) {
 		7: someTest{1},
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var validator map[int]someTest
 	err := json.Unmarshal(data, &validator)
@@ -222,7 +224,7 @@ func TestAssignThingsPrimitivesMapStructKey(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[int]someTest
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -249,7 +251,7 @@ func TestAssignThingsPrimitivesMapPtrStructKey(t *testing.T) {
 		"SomethingNotNil": &someTest{1},
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var validator map[string]someTest
 	err := json.Unmarshal(data, &validator)
@@ -265,7 +267,7 @@ func TestAssignThingsPrimitivesMapPtrStructKey(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 map[string]someTest
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -288,7 +290,7 @@ func TestAssignThingsPrimitivesMapInterface(t *testing.T) {
 		"SomethingNotNil": "1234",
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var validator map[string]interface{}
 	err := json.Unmarshal(data, &validator)
@@ -308,7 +310,7 @@ func TestAssignThingsPrimitivesMapInterface(t *testing.T) {
 		t.FailNow()
 	}
 	var someTest1 map[string]interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -357,7 +359,7 @@ func TestAssignThingsPrimitivesMapInterfaceInNonePointerRoot(t *testing.T) {
 
 	testData := someRoot{t1}
 
-	data, _ := json.Marshal(testData)
+	data, _ := testMarshaler(testData)
 	fmt.Println(string(data))
 	var validator someRoot
 	err := json.Unmarshal(data, &validator)
@@ -373,7 +375,7 @@ func TestAssignThingsPrimitivesMapInterfaceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -422,7 +424,7 @@ func TestAssignThingsPrimitivesMapInterfaceInPointerRoot(t *testing.T) {
 
 	testData := someRoot{&t1}
 
-	data, _ := json.Marshal(testData)
+	data, _ := testMarshaler(testData)
 	fmt.Println(string(data))
 
 	var checkerRoot someRoot
@@ -439,7 +441,7 @@ func TestAssignThingsPrimitivesMapInterfaceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -486,7 +488,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfaceRoot(t *testing.T) {
 
 	testData := someRoot{t1}
 
-	data, _ := json.Marshal(testData)
+	data, _ := testMarshaler(testData)
 	fmt.Println(string(data))
 
 	var checkerRoot someRoot
@@ -503,7 +505,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfaceRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -550,7 +552,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointerRoot(t *testing.T) 
 
 	testData := someRoot{&t1}
 
-	data, _ := json.Marshal(testData)
+	data, _ := testMarshaler(testData)
 	fmt.Println(string(data))
 
 	var checkerRoot someRoot
@@ -567,7 +569,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointerRoot(t *testing.T) 
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -617,7 +619,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointersRoot(t *testing.T)
 	t4 := &t3
 	testData := someRoot{&t4}
 
-	data, _ := json.Marshal(testData)
+	data, _ := testMarshaler(testData)
 	fmt.Println(string(data))
 
 	var checkerRoot someRoot
@@ -634,7 +636,7 @@ func TestAssignThingsPrimitivesMapInterfaceInInterfacePointersRoot(t *testing.T)
 	node := sm.GetASTBuilder().GetAST()
 
 	var rootCheck someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &rootCheck)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &rootCheck)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -674,7 +676,7 @@ func TestAssignThingsPrimitivesMapIntInterface(t *testing.T) {
 		7: "1234",
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 
 	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
@@ -690,7 +692,7 @@ func TestAssignThingsPrimitivesMapIntInterface(t *testing.T) {
 		t.FailNow()
 	}
 	var someTest1 map[int]interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -724,7 +726,7 @@ func TestAssignThingsPrimitivesMapBoolInterface(t *testing.T) {
 		2: 101.123,
 	}
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 
 	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
@@ -740,7 +742,7 @@ func TestAssignThingsPrimitivesMapBoolInterface(t *testing.T) {
 		t.FailNow()
 	}
 	var someTest1 map[uint8]interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -771,7 +773,7 @@ func TestAssignThingsPrimitivesInNonePointerRoot(t *testing.T) {
 
 	t1 := test1{"Peter", 100.123, 100, true, false, nil, "1234"}
 	tr := testRoot{t1}
-	data, _ := json.Marshal(tr)
+	data, _ := testMarshaler(tr)
 	fmt.Println(string(data))
 	var checkerRoot testRoot
 	err := json.Unmarshal(data, &checkerRoot)
@@ -788,7 +790,7 @@ func TestAssignThingsPrimitivesInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -834,7 +836,7 @@ func TestAssignThingsPrimitivesInInterfaceRoot(t *testing.T) {
 
 	t1 := test1{"Peter", 100.123, 100, true, false, nil, "1234"}
 	tr := testRoot{t1}
-	data, _ := json.Marshal(tr)
+	data, _ := testMarshaler(tr)
 	fmt.Println(string(data))
 	var checkerRoot testRoot
 	err := json.Unmarshal(data, &checkerRoot)
@@ -851,7 +853,7 @@ func TestAssignThingsPrimitivesInInterfaceRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -898,7 +900,7 @@ func TestAssignThingsPrimitivesInPointerInterfaceRoot(t *testing.T) {
 
 	var t1 interface{} = test1{"Peter", 100.123, 100, true, false, nil, "1234"}
 	tr := testRoot{&t1}
-	data, _ := json.Marshal(tr)
+	data, _ := testMarshaler(tr)
 	fmt.Println(string(data))
 	var checkerRoot testRoot
 	err := json.Unmarshal(data, &checkerRoot)
@@ -915,7 +917,7 @@ func TestAssignThingsPrimitivesInPointerInterfaceRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -962,7 +964,7 @@ func TestAssignThingsPrimitivesInPointerRoot(t *testing.T) {
 
 	t1 := test1{"Peter", 100.123, 100, true, false, nil, "1234"}
 	tr := testRoot{&t1}
-	data, _ := json.Marshal(tr)
+	data, _ := testMarshaler(tr)
 	fmt.Println(string(data))
 
 	var checkerRoot testRoot
@@ -981,7 +983,7 @@ func TestAssignThingsPrimitivesInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1027,7 +1029,7 @@ func TestAssignThingsPrimitivesInNestedPointerRoot(t *testing.T) {
 
 	t1 := &test1{"Peter", 100.123, 100, true, false, nil, "1234"}
 	tr := testRoot{&t1}
-	data, _ := json.Marshal(tr)
+	data, _ := testMarshaler(tr)
 	fmt.Println(string(data))
 	var checkerRoot testRoot
 	err := json.Unmarshal(data, &checkerRoot)
@@ -1044,7 +1046,7 @@ func TestAssignThingsPrimitivesInNestedPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1100,7 +1102,7 @@ func TestAssignThingsPrimitivesInNestedStructRoot(t *testing.T) {
 	t3 := &test3{t2}
 	tr := testRoot{&t3}
 
-	data, _ := json.Marshal(tr)
+	data, _ := testMarshaler(tr)
 	fmt.Println(string(data))
 	var checkerRoot testRoot
 	err := json.Unmarshal(data, &checkerRoot)
@@ -1118,7 +1120,7 @@ func TestAssignThingsPrimitivesInNestedStructRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someRoot testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someRoot)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someRoot)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1169,7 +1171,7 @@ func TestAssignThingsPrimitivePointers(t *testing.T) {
 	t1 := test1{&someStr, &someFloat, &someInt, &someTrue, &someFalse, &someInterface, new(interface{})}
 	*t1.SomethingNotNil = "1234"
 
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 
 	var someRs test1
@@ -1188,7 +1190,7 @@ func TestAssignThingsPrimitivePointers(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 test1
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1242,7 +1244,7 @@ func TestAssignThingsPrimitivePointersInPointerRoot(t *testing.T) {
 	t1 := test1{&someStr, &someFloat, &someInt, &someTrue, &someFalse, &someInterface, new(interface{})}
 	*t1.SomethingNotNil = "1234"
 	var someRoot testRoot = testRoot{&t1}
-	data, _ := json.Marshal(someRoot)
+	data, _ := testMarshaler(someRoot)
 	fmt.Println(string(data))
 
 	var someRs testRoot
@@ -1261,7 +1263,7 @@ func TestAssignThingsPrimitivePointersInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTestRoot1 testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTestRoot1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTestRoot1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1316,7 +1318,7 @@ func TestAssignThingsPrimitivePointersInNonePointerRoot(t *testing.T) {
 	t1 := test1{&someStr, &someFloat, &someInt, &someTrue, &someFalse, &someInterface, new(interface{})}
 	*t1.SomethingNotNil = "1234"
 	var someRoot testRoot = testRoot{t1}
-	data, _ := json.Marshal(someRoot)
+	data, _ := testMarshaler(someRoot)
 	fmt.Println(string(data))
 
 	var someRs testRoot
@@ -1335,7 +1337,7 @@ func TestAssignThingsPrimitivePointersInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTestRoot1 testRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTestRoot1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTestRoot1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1370,7 +1372,7 @@ func TestAssignThingsPrimitivePointersInNonePointerRoot(t *testing.T) {
 func TestAssignThingsPrimitiveSlice(t *testing.T) {
 
 	t1 := []int{1, 2, 3, 4, 5}
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checker []int
 	err := json.Unmarshal(data, &checker)
@@ -1387,7 +1389,7 @@ func TestAssignThingsPrimitiveSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []int
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1405,7 +1407,7 @@ func TestAssignThingsStructElementSlice(t *testing.T) {
 		Number int
 	}
 	t1 := []someTest{{1}, {2}, {3}, {4}, {5}}
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checker []someTest
 	err := json.Unmarshal(data, &checker)
@@ -1422,7 +1424,7 @@ func TestAssignThingsStructElementSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []someTest
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1439,7 +1441,7 @@ func TestAssignThingsStructPtrElementSlice(t *testing.T) {
 		Number int
 	}
 	t1 := []*someTest{&someTest{1}, &someTest{2}, &someTest{3}, &someTest{4}, &someTest{5}}
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checker []someTest
 	err := json.Unmarshal(data, &checker)
@@ -1456,7 +1458,7 @@ func TestAssignThingsStructPtrElementSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []someTest
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1474,7 +1476,7 @@ func TestAssignThingsStructInterfaceElementSlice(t *testing.T) {
 		Number int
 	}
 	t1 := []interface{}{&someTest{1}, &someTest{2}, &someTest{3}, &someTest{4}, &someTest{5}, nil}
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checker []interface{}
 	err := json.Unmarshal(data, &checker)
@@ -1491,7 +1493,7 @@ func TestAssignThingsStructInterfaceElementSlice(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1520,7 +1522,7 @@ func TestAssignThingsPrimitiveSliceInNonePointerRoot(t *testing.T) {
 
 	test1 := someRoot{[]int{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 
 	var checkerRoot someRoot
@@ -1539,7 +1541,7 @@ func TestAssignThingsPrimitiveSliceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1573,7 +1575,7 @@ func TestAssignThingsNonePrimitiveSliceInNonePointerRoot(t *testing.T) {
 		{"Peter5", 32345, 4551, true, false, nil, map[string]int{"hello": 3}, []interface{}{"string", 123.3, true, nil}},
 	}}
 
-	data, err := json.Marshal(t1)
+	data, err := testMarshaler(t1)
 	if err != nil {
 		t.FailNow()
 	}
@@ -1593,7 +1595,7 @@ func TestAssignThingsNonePrimitiveSliceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1642,7 +1644,7 @@ func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
 
 	test1 := someRoot{&[]int{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 
 	var checkerRoot someRoot
@@ -1661,7 +1663,7 @@ func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1675,7 +1677,7 @@ func TestAssignThingsPrimitiveSliceInPointerRoot(t *testing.T) {
 func TestAssignThingsSliceWithInterfaceElement(t *testing.T) {
 
 	t1 := []interface{}{1, true, false, nil}
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var validator []interface{}
 	_ = json.Unmarshal(data, &validator)
@@ -1689,7 +1691,7 @@ func TestAssignThingsSliceWithInterfaceElement(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1709,7 +1711,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInNonePointerRoot(t *testing.T) {
 
 	test1 := someRoot{[]interface{}{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 	var validator someRoot
 	_ = json.Unmarshal(data, &validator)
@@ -1723,7 +1725,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1743,7 +1745,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRoot(t *testing.T) {
 
 	test1 := someRoot{&[]interface{}{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 	var validator someRoot
 	_ = json.Unmarshal(data, &validator)
@@ -1757,7 +1759,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1783,7 +1785,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRootAndPointerValue(t *test
 
 	test1 := someRoot{&[]*interface{}{&value1, &value2, &value3, &value4, &value5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 	var validator someRoot
 	err := json.Unmarshal(data, &validator)
@@ -1800,7 +1802,7 @@ func TestAssignThingsPrimitiveSliceInterfaceInPointerRootAndPointerValue(t *test
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1826,7 +1828,7 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 
 	t1 := [5]int{1, 2, 3, 4, 5}
 	fmt.Println(reflect.TypeOf(t1).Kind())
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 
 	var checkerRoot [5]int
@@ -1845,7 +1847,7 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]int
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1860,7 +1862,7 @@ func TestAssignThingsPrimitiveArray(t *testing.T) {
 func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 
 	t1 := [4]interface{}{1, true, false, nil}
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checker [4]interface{}
 	_ = json.Unmarshal(data, &checker)
@@ -1881,7 +1883,7 @@ func TestAssignThingsArrayWithInterfaceElement(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [4]interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1901,7 +1903,7 @@ func TestAssignThingsPrimitiveArrayInNonePointerRoot(t *testing.T) {
 
 	test1 := someRoot{[5]int{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 
 	var checkerRoot someRoot
@@ -1920,7 +1922,7 @@ func TestAssignThingsPrimitiveArrayInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1940,7 +1942,7 @@ func TestAssignThingsPrimitiveArrayInPointerRoot(t *testing.T) {
 
 	test1 := someRoot{&[5]int{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 	var checkerRoot someRoot
 
@@ -1959,7 +1961,7 @@ func TestAssignThingsPrimitiveArrayInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -1979,7 +1981,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInNonePointerRoot(t *testing.T) {
 
 	test1 := someRoot{[5]interface{}{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 	var mysomeRoot someRoot
 	_ = json.Unmarshal(data, &mysomeRoot)
@@ -1993,7 +1995,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInNonePointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2013,7 +2015,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRoot(t *testing.T) {
 
 	test1 := someRoot{&[5]interface{}{1, 2, 3, 4, 5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 	var mysomeRoot someRoot
 	_ = json.Unmarshal(data, &mysomeRoot)
@@ -2027,7 +2029,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRoot(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2053,7 +2055,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRootAndPointerValue(t *test
 
 	test1 := someRoot{&[5]*interface{}{&value1, &value2, &value3, &value4, &value5}}
 
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 	fmt.Println(string(data))
 	var mysomeRoot someRoot
 	_ = json.Unmarshal(data, &mysomeRoot)
@@ -2067,7 +2069,7 @@ func TestAssignThingsPrimitiveArrayInterfaceInPointerRootAndPointerValue(t *test
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 someRoot
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2089,7 +2091,7 @@ func TestAssignThingsPrimitiveArraySliceCrossOver(t *testing.T) {
 
 	t1 := [5]int{1, 2, 3, 4, 5}
 	fmt.Println(reflect.TypeOf(t1).Kind())
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checkerRoot [5]int
 
@@ -2107,7 +2109,7 @@ func TestAssignThingsPrimitiveArraySliceCrossOver(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 []int
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2122,7 +2124,7 @@ func TestAssignThingsPrimitiveSliceArrayCrossOver(t *testing.T) {
 
 	t1 := []int{1, 2, 3, 4, 5}
 	fmt.Println(reflect.TypeOf(t1).Kind())
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checkerRoot []int
 
@@ -2140,7 +2142,7 @@ func TestAssignThingsPrimitiveSliceArrayCrossOver(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]int
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2161,7 +2163,7 @@ func TestAssignThingsPrimitiveArrayPointerValues(t *testing.T) {
 	t1 := [5]*int{&v1, &v2, &v3, &v4, &v5}
 
 	fmt.Println(reflect.TypeOf(t1).Kind())
-	data, _ := json.Marshal(t1)
+	data, _ := testMarshaler(t1)
 	fmt.Println(string(data))
 	var checkerRoot [5]*int
 
@@ -2179,7 +2181,7 @@ func TestAssignThingsPrimitiveArrayPointerValues(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someTest1 [5]*int
-	err = unmarshaler.UnmarshallAST(node, nil, &someTest1)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someTest1)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2218,7 +2220,7 @@ func TestNestedPointerResolve(t *testing.T) {
 		t.FailNow()
 	}
 
-	content, err := json.Marshal(somePtr)
+	content, err := testMarshaler(somePtr)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2245,7 +2247,7 @@ func TestNestedPointerResolve(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 *********int
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2262,7 +2264,7 @@ func TestBareStruct(t *testing.T) {
 	}
 	var somePtr someStruct
 
-	data, _ := json.Marshal(somePtr)
+	data, _ := testMarshaler(somePtr)
 	var checker someStruct
 	err := json.Unmarshal(data, &checker)
 	if err != nil {
@@ -2277,7 +2279,7 @@ func TestBareStruct(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2292,7 +2294,7 @@ func TestPtrStruct(t *testing.T) {
 	}
 	var somePtr *someStruct
 
-	data, _ := json.Marshal(somePtr)
+	data, _ := testMarshaler(somePtr)
 	var checker someStruct
 	err := json.Unmarshal(data, &checker)
 	if err != nil {
@@ -2307,7 +2309,7 @@ func TestPtrStruct(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 *someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2337,7 +2339,7 @@ func TestCustomizeType(t *testing.T) {
 		map[MyType][]MyType{1: []MyType{4, 5, 6}, 2: []MyType{7, 8, 9}, 3: []MyType{10, 11, 12}},
 		[2]MyType{13, 14}}
 
-	data, _ = json.Marshal(somePtr)
+	data, _ = testMarshaler(somePtr)
 	var checker someStruct
 	err = json.Unmarshal(data, &checker)
 	if err != nil {
@@ -2352,7 +2354,7 @@ func TestCustomizeType(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2396,7 +2398,7 @@ func TestMapSliceType(t *testing.T) {
 		},
 	}
 
-	data, _ := json.Marshal(someMap)
+	data, _ := testMarshaler(someMap)
 	var checker []map[string][]interface{}
 	err := json.Unmarshal(data, &checker)
 	if err != nil {
@@ -2411,7 +2413,7 @@ func TestMapSliceType(t *testing.T) {
 	node := sm.GetASTBuilder().GetAST()
 
 	var someReceiver2 []map[string][]interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2434,7 +2436,7 @@ func TestEmptyObject(t *testing.T) {
 		Data map[string]Bro
 	}
 	var t1 something = something{make(map[string]Bro)}
-	data, err := json.Marshal(t1)
+	data, err := testMarshaler(t1)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2451,7 +2453,7 @@ func TestEmptyObject(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2466,7 +2468,7 @@ func TestEmptySlice(t *testing.T) {
 		Data []int
 	}
 	var t1 something = something{make([]int, 0)}
-	data, err := json.Marshal(t1)
+	data, err := testMarshaler(t1)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2483,7 +2485,7 @@ func TestEmptySlice(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2499,7 +2501,7 @@ func TestEmptyArray(t *testing.T) {
 		Data [0]int
 	}
 	var t1 something
-	data, err := json.Marshal(t1)
+	data, err := testMarshaler(t1)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2516,7 +2518,7 @@ func TestEmptyArray(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 something
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2528,7 +2530,7 @@ func TestEmptyArray(t *testing.T) {
 
 func TestInterfaceNil(t *testing.T) {
 	var someinterface interface{}
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2541,7 +2543,7 @@ func TestInterfaceNil(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 interface{}
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2556,7 +2558,7 @@ func TestPtrSliceNilCaseInMap(t *testing.T) {
 		"a": nil,
 		"b": &[]int{0, 1, 2, 3},
 	}
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2575,7 +2577,7 @@ func TestPtrSliceNilCaseInMap(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*[]int
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2594,7 +2596,7 @@ func TestPtrMapNilCaseInMap(t *testing.T) {
 		"a": nil,
 		"b": &map[int]int{0: 0, 1: 1, 2: 2, 3: 3},
 	}
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2613,7 +2615,7 @@ func TestPtrMapNilCaseInMap(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*map[int]int
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2632,7 +2634,7 @@ func TestPtrSliceNilCaseInSlice(t *testing.T) {
 		nil,
 		&[]int{0, 1, 2, 3},
 	}
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2651,7 +2653,7 @@ func TestPtrSliceNilCaseInSlice(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 []*[]int
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2674,7 +2676,7 @@ func TestSliceOfPtrToCollections(t *testing.T) {
 		nil,
 		&[]someStruct{{1}, {2}},
 	}
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2693,7 +2695,7 @@ func TestSliceOfPtrToCollections(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 []*[]someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2713,7 +2715,7 @@ func TestInterfaceNilOnMapInterface(t *testing.T) {
 		"a": nil,
 		"b": &[]int{0, 1, 2, 3},
 	}
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2732,7 +2734,7 @@ func TestInterfaceNilOnMapInterface(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 map[string]*[]int
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2748,7 +2750,7 @@ func TestInterfaceNilOnMapInterface(t *testing.T) {
 }
 func TestEmptyString(t *testing.T) {
 	var someinterface string
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2761,7 +2763,7 @@ func TestEmptyString(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 string
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2772,7 +2774,7 @@ func TestEmptyString(t *testing.T) {
 }
 func TestString(t *testing.T) {
 	var someinterface string = "123"
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2785,7 +2787,7 @@ func TestString(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 string
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2797,7 +2799,7 @@ func TestString(t *testing.T) {
 
 func TestBool(t *testing.T) {
 	var someinterface bool = false
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2810,7 +2812,7 @@ func TestBool(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 bool
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2822,7 +2824,7 @@ func TestBool(t *testing.T) {
 
 func TestNumber(t *testing.T) {
 	var someinterface int = 1234567
-	data, err := json.Marshal(someinterface)
+	data, err := testMarshaler(someinterface)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2837,7 +2839,7 @@ func TestNumber(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someinterface2 int
-	err = unmarshaler.UnmarshallAST(node, nil, &someinterface2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someinterface2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -2907,7 +2909,7 @@ func TestFinalExam(t *testing.T) {
 		Name19: MyType(123),
 	}
 
-	data, err := json.Marshal(test1)
+	data, err := testMarshaler(test1)
 	if err != nil {
 		t.FailNow()
 	}
@@ -2936,7 +2938,7 @@ func TestFinalExam(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 SomeStruct1
-	err = unmarshaler.UnmarshallAST(node, nil, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3111,7 +3113,7 @@ func TestVariable(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var someReceiver2 map[string]interface{}
-	err = unmarshaler.UnmarshallAST(node, variables, &someReceiver2)
+	err = unmarshaler.UnmarshallAST(node, variables, testMarshaler, &someReceiver2)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3161,7 +3163,7 @@ func TestFieldByTag(t *testing.T) {
 	}
 
 	test1 := mydata{"Ann", 198, "CA Redwood shore"}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker mydata
 	_ = json.Unmarshal(data, &checker)
@@ -3174,7 +3176,7 @@ func TestFieldByTag(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3216,7 +3218,7 @@ func TestEmbeddingFields(t *testing.T) {
 		mydata2: testdata2,
 		Home:    "US",
 	}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker newTest
 	_ = json.Unmarshal(data, &checker)
@@ -3229,7 +3231,7 @@ func TestEmbeddingFields(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver newTest
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3270,7 +3272,7 @@ func TestCusomUnmarshal(t *testing.T) {
 
 	var someItem mybool = false
 	var test1 mydata = mydata{T1: &someItem}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker mydata
 	_ = json.Unmarshal(data, &checker)
@@ -3283,7 +3285,7 @@ func TestCusomUnmarshal(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3311,7 +3313,7 @@ func TestCusomUnmarshalSlice(t *testing.T) {
 
 	var someItem myslice = []int{'1', '2', 3}
 	var test1 mydata = mydata{T1: someItem}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker myslice = make(myslice, 0)
 	_ = json.Unmarshal(data, &checker)
@@ -3324,7 +3326,7 @@ func TestCusomUnmarshalSlice(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3349,7 +3351,7 @@ func TestCusomUnmarshalMap(t *testing.T) {
 
 	var someItem mymap = mymap{"123": 1}
 	var test1 mydata = mydata{T1: &someItem}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker mymap = make(mymap)
 	_ = json.Unmarshal(data, &checker)
@@ -3362,7 +3364,7 @@ func TestCusomUnmarshalMap(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3380,7 +3382,7 @@ func TestCusomUnmarshalMapNonePointer(t *testing.T) {
 
 	var someItem mymap = mymap{"123": 1}
 	var test1 mydata = mydata{T1: someItem}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker mymap = make(mymap)
 	_ = json.Unmarshal(data, &checker)
@@ -3393,7 +3395,7 @@ func TestCusomUnmarshalMapNonePointer(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver mydata
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3419,7 +3421,7 @@ func (m *myUnmarshalstruct) UnmarshalJSON(b []byte) error {
 func TestCusomUnmarshalStruct(t *testing.T) {
 
 	var test1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker myUnmarshalstruct
 	_ = json.Unmarshal(data, &checker)
@@ -3432,7 +3434,7 @@ func TestCusomUnmarshalStruct(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver myUnmarshalstruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3454,7 +3456,7 @@ func TestCusomUnmarshalStructInStructField(t *testing.T) {
 	}
 	var field1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
 	var test1 someStruct = someStruct{field1, 999}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker someStruct
 	_ = json.Unmarshal(data, &checker)
@@ -3467,7 +3469,7 @@ func TestCusomUnmarshalStructInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3491,7 +3493,7 @@ func TestCusomUnmarshalStructInStructPointerField(t *testing.T) {
 	}
 	var field1 myUnmarshalstruct = myUnmarshalstruct{"Kenny", 123}
 	var test1 someStruct = someStruct{&field1, 999}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker someStruct
 	_ = json.Unmarshal(data, &checker)
@@ -3504,7 +3506,7 @@ func TestCusomUnmarshalStructInStructPointerField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3534,7 +3536,7 @@ func TestCusomUnmarshalStringInStructField(t *testing.T) {
 	}
 	var field1 myString = myString("123")
 	var test1 someStruct = someStruct{field1}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker someStruct
 	_ = json.Unmarshal(data, &checker)
@@ -3547,7 +3549,7 @@ func TestCusomUnmarshalStringInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3564,7 +3566,7 @@ func TestCusomUnmarshalStringInStructPointerField(t *testing.T) {
 	}
 	var field1 myString = myString("123")
 	var test1 someStruct = someStruct{&field1}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker someStruct
 	_ = json.Unmarshal(data, &checker)
@@ -3577,7 +3579,7 @@ func TestCusomUnmarshalStringInStructPointerField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3601,7 +3603,7 @@ func TestCusomUnmarshalIntInStructField(t *testing.T) {
 	}
 	var field1 myNumber = myNumber(123)
 	var test1 someStruct = someStruct{field1}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker someStruct
 	_ = json.Unmarshal(data, &checker)
@@ -3614,7 +3616,7 @@ func TestCusomUnmarshalIntInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3631,7 +3633,7 @@ func TestCusomUnmarshalIntInStructPointerField(t *testing.T) {
 	}
 	var field1 myNumber = myNumber(123)
 	var test1 someStruct = someStruct{&field1}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker someStruct
 	_ = json.Unmarshal(data, &checker)
@@ -3644,7 +3646,7 @@ func TestCusomUnmarshalIntInStructPointerField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3669,7 +3671,7 @@ func TestCusomUnmarshalNullInStructField(t *testing.T) {
 		Field1 *myNil // this won't care if the field is a pointer or not, as long as it has a pointer receiver unmarshaler, it will change the value
 	}
 	var test1 someStruct = someStruct{nil}
-	data, _ := json.Marshal(test1)
+	data, _ := testMarshaler(test1)
 
 	var checker someStruct
 	_ = json.Unmarshal(data, &checker)
@@ -3682,7 +3684,7 @@ func TestCusomUnmarshalNullInStructField(t *testing.T) {
 	}
 	node := sm.GetASTBuilder().GetAST()
 	var myReceiver someStruct
-	err = unmarshaler.UnmarshallAST(node, nil, &myReceiver)
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -3692,4 +3694,246 @@ func TestCusomUnmarshalNullInStructField(t *testing.T) {
 		t.FailNow()
 	}
 
+}
+
+func TestNameCollision(t *testing.T) {
+	type mydata1 struct {
+		Name1 string `json:"name1"`
+	}
+	type database struct {
+		mydata1
+		Name2 int `json:"name1"`
+	}
+	type mydata2 struct {
+		database
+		Address string `json:"name2"`
+	}
+
+	type newTest struct {
+		mydata2
+		Home string `json:"name2"`
+	}
+
+	testdata1 := mydata1{"Ann"}
+	testdata2 := mydata2{database: database{testdata1, 198}, Address: "CA Redwood shore"}
+	var test1 newTest = newTest{
+		mydata2: testdata2,
+		Home:    "US",
+	}
+	data, _ := testMarshaler(test1)
+
+	var checker newTest
+	_ = json.Unmarshal(data, &checker)
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err := sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver newTest
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	if myReceiver.Home != checker.Home {
+		t.FailNow()
+	}
+	if myReceiver.Name1 != checker.Name1 {
+		t.FailNow()
+	}
+	if myReceiver.Address != checker.Address {
+		t.FailNow()
+	}
+	if myReceiver.Name2 != checker.Name2 {
+		t.FailNow()
+	}
+}
+
+func TestNameConflic(t *testing.T) {
+	type Example struct {
+		F2 string
+		F1 string `json:"F2"`
+	}
+
+	var t1 Example = Example{"hello", "world"}
+	data, err := testMarshaler(t1)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker Example
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+}
+
+func TestNameConflic2(t *testing.T) {
+	type Example2 struct {
+		F1 string `json:"F2"`
+	}
+	type Example struct {
+		Example2
+		F2 string
+	}
+
+	var t1 Example = Example{Example2{"hello"}, "world"}
+	data, err := testMarshaler(t1)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker Example
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+}
+
+func TestNameConflic3(t *testing.T) {
+
+	type Example struct {
+		F1 string `json:",omitempty"`
+		F2 string `json:"F1,omitempty"`
+	}
+
+	var t1 Example = Example{"hello", "world"}
+	data, err := testMarshaler(t1)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker Example
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+}
+
+func TestNameConflic4(t *testing.T) {
+
+	type Example struct {
+		FX string `json:"F1,omitempty"`
+		F1 string
+	}
+
+	var t1 Example = Example{"hello", "world"}
+	data, err := testMarshaler(t1)
+	if err != nil {
+		t.FailNow()
+	}
+
+	var checker Example
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+}
+
+func TestNameConflic5(t *testing.T) {
+
+	type Example1 struct {
+		FX   string `json:"F1,omitempty"`
+		FX23 string `json:"F1,omitempty"`
+	}
+	type Example struct {
+		Example1
+		Name int
+	}
+
+	data := []byte(`{"F1":"Hello", "Name":10}`)
+	var checker Example
+	err := json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = unmarshaler.UnmarshallAST(node, nil, testMarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
 }
