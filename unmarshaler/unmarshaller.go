@@ -109,6 +109,7 @@ func (resolver *unmarshallResolver) process() error {
 	return node.Visit(resolver)
 }
 
+// use marshaler to deal with the string variable/variable, use unmarshaler to deal with the json tag `string` option
 func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshaler ast.MarshalerFunc, unmarshaler ast.UnmarshalerFunc, out interface{}) error {
 	// deep first traverse the AST
 	valueItem := reflect.ValueOf(out)
