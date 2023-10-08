@@ -1,6 +1,7 @@
 package jsonextend
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
@@ -21,8 +22,10 @@ func Parse(reader io.Reader, variables map[string]interface{}) ([]byte, error) {
 	ast := sm.GetAST()
 	return interpreter.PrettyInterpret(ast, variables, Marshal)
 }
-
-func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}) error {
+func unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}, depth int) error {
+	if depth > maxDepth {
+		return errors.New("recursion depth exceeded")
+	}
 	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
 	err := sm.ProcessData()
 	if err != nil {
@@ -32,7 +35,12 @@ func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface
 		return errors.New("invalid json")
 	}
 	ast := sm.GetAST()
-	return unmarshaler.UnmarshallAST(ast, variables, Marshal, out)
+	return unmarshaler.UnmarshallAST(ast, variables, Marshal, func(v []byte, out interface{}) error {
+		return unmarshal(bytes.NewReader(v), variables, out, depth+1)
+	}, out)
+}
+func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}) error {
+	return unmarshal(reader, variables, out, 1)
 }
 
 const maxDepth = 4

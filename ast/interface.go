@@ -1,6 +1,7 @@
 package ast
 
 type MarshalerFunc func(v interface{}) ([]byte, error)
+type UnmarshalerFunc func(v []byte, out interface{}) error
 
 type NodeVisitor interface {
 	VisitStringNode(node *JsonStringNode) error

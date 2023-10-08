@@ -144,7 +144,9 @@ func TestMarshalObjPointer(t *testing.T) {
 	}
 	if !bytes.Equal(rs1, rs2) {
 		fmt.Println("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
-		t.Log(err)
+
+		t.Log(string(rs1))
+		t.Log(string(rs2))
 		t.FailNow()
 	}
 }

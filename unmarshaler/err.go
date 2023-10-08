@@ -22,6 +22,7 @@ var (
 	ErrorInternalExpectingArrayLikeObject              = errors.New("expecting array like object but find others")
 	ErrorInvalidUnmarshalResult                        = errors.New("invalid unmarshal result")
 	ErrorInvalidTag                                    = errors.New("invalid json tag")
+	ErrorUnsupportedDataKind                           = errors.New("unsupported variable data kind")
 )
 
 type ErrorFieldNotExist struct {

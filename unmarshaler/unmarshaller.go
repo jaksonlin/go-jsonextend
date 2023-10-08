@@ -22,39 +22,41 @@ func (resolver *unmarshallResolver) processKVKeyNode(node ast.JsonStringValueNod
 	return key, nil
 }
 
-func (resolver *unmarshallResolver) getFieldByTag(objKey string) (reflect.Value, error) {
+func (resolver *unmarshallResolver) getFieldByTag(objKey string) (*util.JSONStructField, error) {
 	resolver.collectAllFields()
 	fieldInfo, ok := resolver.fields[objKey]
 	if !ok {
-		return reflect.Value{}, NewErrorFieldNotValid(objKey)
+		return nil, NewErrorFieldNotValid(objKey)
 	}
 	return fieldInfo, nil
 }
 
 // create resolver to resolving the things in kv's value
 func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast.JsonNode) (*unmarshallResolver, error) {
-	// create child resolver by data type
-	var childElementType reflect.Type = resolver.ptrToActualValue.Elem().Type()
-	// can only be map/struct to hold the kv
+	// check if the root is a struct or map to hold our kv pair
+	var kvParentElementType reflect.Type = resolver.ptrToActualValue.Elem().Type()
 
-	if childElementType.Kind() == reflect.Map {
+	var kvValueElementType reflect.Type = nil
+	var tagOption string = ""
+	if kvParentElementType.Kind() == reflect.Map {
+		// when parent is a map, the child element type is the map's value type
+		kvValueElementType = kvParentElementType.Elem()
 
-		childElementType = resolver.ptrToActualValue.Type().Elem().Elem()
-
-	} else if childElementType.Kind() == reflect.Struct {
-
+	} else if kvParentElementType.Kind() == reflect.Struct {
+		// when parent is a struct, the child element type is the struct's field type
 		fieldInfo, err := resolver.getFieldByTag(key) // struct field
 		if err != nil {
 			return nil, err
 		}
-		childElementType = fieldInfo.Type()
+		kvValueElementType = fieldInfo.FieldValue.Type()
+		tagOption = fieldInfo.Options
 
 	} else {
-		return nil, NewErrorInternalExpectingStructButFindOthers(childElementType.Kind().String())
+		return nil, NewErrorInternalExpectingStructButFindOthers(kvParentElementType.Kind().String())
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver, err := newUnmarshallResolver(valueNode, childElementType, resolver.options)
+	newResolver, err := newUnmarshallResolver(valueNode, kvValueElementType, resolver.options, tagOption)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +80,7 @@ func (resolver *unmarshallResolver) createArrayElementResolver(index int, node a
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options)
+	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options, "")
 	if err != nil {
 		return nil, err
 	}
@@ -107,16 +109,16 @@ func (resolver *unmarshallResolver) process() error {
 	return node.Visit(resolver)
 }
 
-func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshaler ast.MarshalerFunc, out interface{}) error {
+func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshaler ast.MarshalerFunc, unmarshaler ast.UnmarshalerFunc, out interface{}) error {
 	// deep first traverse the AST
 	valueItem := reflect.ValueOf(out)
 	if valueItem.Kind() != reflect.Pointer || valueItem.IsNil() {
 		return ErrOutNotPointer
 	}
 
-	options := NewUnMarshallOptions(variables, marshaler)
+	options := NewUnMarshallOptions(variables, marshaler, unmarshaler)
 	traverseStack := options.resolverStack
-	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options)
+	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options, "")
 	if err != nil {
 		return err
 	}

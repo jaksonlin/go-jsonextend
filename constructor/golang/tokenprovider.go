@@ -129,15 +129,16 @@ func (t *tokenProvider) processStructField(field reflect.StructField, element re
 }
 
 func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
-	allFields := util.FlattenJsonStruct(workItem.reflectValue)
-	for key, val := range allFields {
-		valueTokenType := token.GetTokenTypeByReflection(&val)
+	allFields := util.FlattenJsonStructForMarshal(workItem.reflectValue)
+	for i := 0; i < len(allFields); i += 1 {
+		val := allFields[i]
+		valueTokenType := token.GetTokenTypeByReflection(&val.FieldValue)
 		if valueTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
 
-		t.workingStack.Push(&workingItem{reflectValue: val, tokenType: valueTokenType})
-		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(key), tokenType: token.TOKEN_STRING})
+		t.workingStack.Push(&workingItem{reflectValue: val.FieldValue, tokenType: valueTokenType})
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(val.FieldName), tokenType: token.TOKEN_STRING})
 	}
 	return nil
 }

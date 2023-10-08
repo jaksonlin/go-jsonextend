@@ -598,3 +598,21 @@ func TestFlag(t *testing.T) {
 	fmt.Printf("%b", flagKindMask)
 
 }
+func TestStringOption(t *testing.T) {
+
+	type banana struct {
+		Name2 string `json:",string"`
+		Age2  int    `json:",string"`
+		IsOK  bool   `json:",string"`
+	}
+	var b banana = banana{
+		Name2: "OWW",
+		Age2:  111,
+		IsOK:  false,
+	}
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println("data: ", string(data))
+}

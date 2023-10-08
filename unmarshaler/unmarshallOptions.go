@@ -14,14 +14,16 @@ type unmarshallOptions struct {
 	resolverStack *util.Stack[*unmarshallResolver]
 	variables     map[string]interface{}
 	marshaler     ast.MarshalerFunc
+	unmarshaler   ast.UnmarshalerFunc
 }
 
-func NewUnMarshallOptions(variables map[string]interface{}, marshaler ast.MarshalerFunc) *unmarshallOptions {
+func NewUnMarshallOptions(variables map[string]interface{}, marshaler ast.MarshalerFunc, unmarshaler ast.UnmarshalerFunc) *unmarshallOptions {
 	options := &unmarshallOptions{
 		ensureInt:     true,
 		variables:     variables,
 		resolverStack: util.NewStack[*unmarshallResolver](),
 		marshaler:     marshaler,
+		unmarshaler:   unmarshaler,
 	}
 	return options
 }
