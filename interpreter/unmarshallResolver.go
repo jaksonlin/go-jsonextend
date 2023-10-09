@@ -29,7 +29,7 @@ type unmarshallResolver struct {
 	ptrToActualValue     reflect.Value // single ptr to no matter what actual value is (for *****int, keeps only *int to the actual value)
 	fields               map[string]*util.JSONStructField
 	hasUnmarshaller      bool
-	tagOption            string
+	tagOption            *util.JsonTagOptions
 }
 
 func (resolver *unmarshallResolver) collectAllFields() error {
@@ -242,7 +242,7 @@ func newUnmarshallResolver(
 	node ast.JsonNode,
 	outType reflect.Type,
 	options *unmarshallOptions,
-	tagOption string) (*unmarshallResolver, error) {
+	tagOption *util.JsonTagOptions) (*unmarshallResolver, error) {
 	var nodeToWork ast.JsonNode = node
 	someOutType := outType
 	numberOfPointer := 0
@@ -463,46 +463,47 @@ func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) er
 		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
 	}
 	valueToUnmarshal := util.RepairUTF8(string(node.GetValue()))
-	if resolver.tagOption != "string" {
-
+	if resolver.tagOption == nil || !resolver.tagOption.StringEncode {
 		resolver.setValue(valueToUnmarshal)
-	} else {
-		// this will only happen at AST string node when the tag is `string`
-		switch resolver.outElementKind {
-		case reflect.Bool:
-			if valueToUnmarshal == "true" {
-				resolver.setValue(true)
-			} else {
-				resolver.setValue(false)
-			}
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			intValue, err := strconv.ParseInt(valueToUnmarshal, 10, 64)
-			if err != nil {
-				return err
-			}
-			resolver.setValue(intValue)
-		case reflect.Float32, reflect.Float64:
-			floatValue, err := strconv.ParseFloat(valueToUnmarshal, 64)
-			if err != nil {
-				return err
-			}
-			resolver.setValue(floatValue)
-		case reflect.String:
-			var result string = string(node.Value)
-			decodedString, err := strconv.Unquote(result)
-			if err != nil {
-				return err
-			}
-			err = resolver.options.unmarshaler([]byte(decodedString), &result)
-			if err != nil {
-				return err
-			}
-
-			resolver.setValue(result)
-		default:
-			return ErrorUnsupportedDataKind
-		}
+		return resolver.resolve()
 	}
+
+	// this will only happen at AST string node when the tag is `string`
+	switch resolver.outElementKind {
+	case reflect.Bool:
+		if valueToUnmarshal == "true" {
+			resolver.setValue(true)
+		} else {
+			resolver.setValue(false)
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		intValue, err := strconv.ParseInt(valueToUnmarshal, 10, 64)
+		if err != nil {
+			return err
+		}
+		resolver.setValue(intValue)
+	case reflect.Float32, reflect.Float64:
+		floatValue, err := strconv.ParseFloat(valueToUnmarshal, 64)
+		if err != nil {
+			return err
+		}
+		resolver.setValue(floatValue)
+	case reflect.String:
+		var result string = string(node.Value)
+		decodedString, err := strconv.Unquote(result)
+		if err != nil {
+			return err
+		}
+		err = resolver.options.unmarshaler([]byte(decodedString), &result)
+		if err != nil {
+			return err
+		}
+
+		resolver.setValue(result)
+	default:
+		return ErrorUnsupportedDataKind
+	}
+
 	return resolver.resolve()
 }
 

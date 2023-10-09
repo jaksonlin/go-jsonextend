@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
-	"strings"
 	"unicode/utf8"
 )
 
@@ -43,18 +42,6 @@ func RepairUTF8(s string) string {
 	}
 
 	return string(repaired)
-}
-
-func GetFieldNameAndOptions(jsonTag string) (string, string) {
-	rs := strings.SplitN(jsonTag, ",", 2)
-
-	if len(rs) == 1 {
-		return rs[0], ""
-	}
-	if len(rs) == 2 {
-		return rs[0], rs[1]
-	}
-	return "", ""
 }
 
 // given non-ASCII UTF-8 strings encode it to json string align with RFC 7159

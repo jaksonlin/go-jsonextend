@@ -3961,7 +3961,7 @@ func TestStringOption2(t *testing.T) {
 
 	ex := Example{"hello", 123, true}
 	var checker Example
-	data, err := json.Marshal(ex)
+	data, err := testMarshaler(ex)
 	if err != nil {
 		t.FailNow()
 	}

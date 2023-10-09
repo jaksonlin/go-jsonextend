@@ -1,6 +1,7 @@
 package interpreter_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -118,7 +119,7 @@ func TestInterpreter(t *testing.T) {
 	variableConfig["key18"] = "key18+"
 	variableConfig["value19"] = "somevalue"
 	variableConfig["value20"] = []int{1, 2, 3}
-	rs, err := interpreter.PrettyInterpret(a, variableConfig, json.Marshal)
+	rs, err := interpreter.PrettyInterpret(a, variableConfig, interpreter.Marshal)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
@@ -134,4 +135,32 @@ func TestInterpreter(t *testing.T) {
 	if len(someMap) != 11 {
 		t.FailNow()
 	}
+}
+
+func TestOmit(t *testing.T) {
+	type AnotherData struct {
+		Name string
+	}
+
+	type Data struct {
+		StringField    string            `json:"stringField,omitempty,string"`
+		IntField       int               `json:"intField,omitempty"`
+		BoolField      bool              `json:"boolField,omitempty"`
+		SliceField     []string          `json:"sliceField,omitempty"`
+		MapField       map[string]string `json:"mapField,omitempty"`
+		PointerField   *string           `json:"pointerField,omitempty"`
+		StructField    AnotherData       `json:"structField,omitempty"`
+		InterfaceField interface{}       `json:"interfaceField,omitempty"`
+	}
+
+	d := Data{}
+	result, err := interpreter.Marshal(d)
+	if err != nil {
+		t.FailNow()
+	}
+	if !bytes.Equal(result, []byte(`{}`)) {
+		t.FailNow()
+	}
+	fmt.Println(string(result))
+
 }

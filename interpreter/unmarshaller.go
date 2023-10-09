@@ -41,7 +41,7 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 	var kvParentElementType reflect.Type = resolver.ptrToActualValue.Elem().Type()
 
 	var kvValueElementType reflect.Type = nil
-	var tagOption string = ""
+	var tagOption *util.JsonTagOptions
 	if kvParentElementType.Kind() == reflect.Map {
 		// when parent is a map, the child element type is the map's value type
 		kvValueElementType = kvParentElementType.Elem()
@@ -53,7 +53,7 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 			return nil, err
 		}
 		kvValueElementType = fieldInfo.FieldValue.Type()
-		tagOption = fieldInfo.Options
+		tagOption = fieldInfo.FieldJsonTag
 
 	} else {
 		return nil, NewErrorInternalExpectingStructButFindOthers(kvParentElementType.Kind().String())
@@ -84,7 +84,7 @@ func (resolver *unmarshallResolver) createArrayElementResolver(index int, node a
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options, "")
+	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshale
 
 	options := NewUnMarshallOptions(variables, marshaler, unmarshaler)
 	traverseStack := options.resolverStack
-	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options, "")
+	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options, nil)
 	if err != nil {
 		return err
 	}

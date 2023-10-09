@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/jaksonlin/go-jsonextend/token"
 )
@@ -42,9 +43,33 @@ func (om *OrderedMap) Iterate(f func(key string, value interface{})) {
 }
 
 type JSONStructField struct {
-	FieldName  string
-	FieldValue reflect.Value
-	Options    string
+	FieldName    string
+	FieldValue   reflect.Value
+	FieldJsonTag *JsonTagOptions
+}
+
+type JsonTagOptions struct {
+	Omitempty    bool
+	StringEncode bool
+	fieldName    string // will not be used outside, cause the correct field name will be set in the `fieldName` of `JSONStructField`
+}
+
+func GetFieldNameAndOptions(jsonTag string) *JsonTagOptions {
+	if jsonTag == "-" {
+		return nil
+	}
+	rs := strings.Split(jsonTag, ",")
+	ret := &JsonTagOptions{}
+	for _, item := range rs {
+		if item == "omitempty" {
+			ret.Omitempty = true
+		} else if item == "string" {
+			ret.StringEncode = true
+		} else {
+			ret.fieldName = item
+		}
+	}
+	return ret
 }
 
 // this is for Unmarshal, because when unmarshall, we need to know the json key name;
@@ -84,30 +109,30 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 			if jsonTag == "-" {
 				continue
 			}
-			fieldName, fieldOption := GetFieldNameAndOptions(jsonTag)
 			// 3. json tag without json key name, lower the precedent
-			if len(fieldName) == 0 {
-				// no json key name in json tag, lower the precedent
+			if strings.HasPrefix(jsonTag, ",") {
+				// json tag without json key name, lower the precedent
 				// when a field name colllison with json tag name, the field will be dropped
 				noneJsonTagFields = append(noneJsonTagFields, i)
 				continue
 			}
+			tagConfig := GetFieldNameAndOptions(jsonTag)
 			// 4. check same level key collision
-			if createFromHere, ok := jsonTagFields[fieldName]; !ok {
-				jsonTagFields[fieldName] = false
+			if createFromHere, ok := jsonTagFields[tagConfig.fieldName]; !ok {
+				jsonTagFields[tagConfig.fieldName] = false
 				// 4.1 no collision with upper level, create and mark createFromHere, otherwise upper level take precedent, do nothing
-				if _, ok := flattenFields[fieldName]; !ok {
-					jsonTagFields[fieldName] = true
-					flattenFields[fieldName] = &JSONStructField{
-						FieldName:  fieldName,
-						FieldValue: item.Field(i),
-						Options:    fieldOption,
+				if _, ok := flattenFields[tagConfig.fieldName]; !ok {
+					jsonTagFields[tagConfig.fieldName] = true
+					flattenFields[tagConfig.fieldName] = &JSONStructField{
+						FieldName:    tagConfig.fieldName,
+						FieldValue:   item.Field(i),
+						FieldJsonTag: tagConfig,
 					}
 				}
 			} else {
 				// 4.2 collision occurs, and we have created value into the `flattenFields`, removed them
 				if createFromHere {
-					delete(flattenFields, fieldName)
+					delete(flattenFields, tagConfig.fieldName)
 				}
 			}
 		}
@@ -116,15 +141,15 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 			field := item.Type().Field(noneJsonfieldIndex)
 			if _, ok := flattenFields[field.Name]; !ok {
 				flattenFields[field.Name] = &JSONStructField{
-					FieldName:  field.Name,
-					FieldValue: item.Field(noneJsonfieldIndex),
-					Options:    "",
+					FieldName:    field.Name,
+					FieldValue:   item.Field(noneJsonfieldIndex),
+					FieldJsonTag: nil,
 				}
 				jsonTag, ok := field.Tag.Lookup("json")
 				if ok {
 					// no json tag field name but have option
-					_, fieldOption := GetFieldNameAndOptions(jsonTag)
-					flattenFields[field.Name].Options = fieldOption
+					tagConfig := GetFieldNameAndOptions(jsonTag)
+					flattenFields[field.Name].FieldJsonTag = tagConfig
 				}
 			}
 		}
@@ -168,31 +193,36 @@ func FlattenJsonStructForMarshal(workItem reflect.Value) []*JSONStructField {
 				noneJsonTagFields = append(noneJsonTagFields, i)
 				continue
 			}
-			fieldName, fieldOptions := GetFieldNameAndOptions(jsonTag)
-			// 3. json tag without json key name, lower the precedent
-			if len(fieldName) == 0 {
+			// 2.1 drop when the field is marked with `-`
+			if jsonTag == "-" {
+				continue
+			}
+			// 2.2 for json tag without json key name, lower the precedent
+			if strings.HasPrefix(jsonTag, ",") {
 				// no json key name in json tag, lower the precedent
 				// when a field name colllison with json tag name, the field will be dropped
 				noneJsonTagFields = append(noneJsonTagFields, i)
 				continue
 			}
-			// 4. check same level key collision
-			if createFromHere, ok := jsonTagFields[fieldName]; !ok {
-				jsonTagFields[fieldName] = false
+			// 3. check same level key collision
+
+			tagConfig := GetFieldNameAndOptions(jsonTag)
+			if createFromHere, ok := jsonTagFields[tagConfig.fieldName]; !ok {
+				jsonTagFields[tagConfig.fieldName] = false
 				// 4.1 no collision with upper level, create and mark createFromHere, otherwise upper level take precedent, do nothing
-				if _, ok := flattenFieldsState[fieldName]; !ok {
-					jsonTagFields[fieldName] = true
-					flattenFieldsState[fieldName] = len(flattenFields)
+				if _, ok := flattenFieldsState[tagConfig.fieldName]; !ok {
+					jsonTagFields[tagConfig.fieldName] = true
+					flattenFieldsState[tagConfig.fieldName] = len(flattenFields)
 					flattenFields = append(flattenFields, &JSONStructField{
-						FieldName:  fieldName,
-						FieldValue: item.Field(i),
-						Options:    fieldOptions,
+						FieldName:    tagConfig.fieldName,
+						FieldValue:   item.Field(i),
+						FieldJsonTag: tagConfig,
 					})
 				}
 			} else {
 				// 4.2 collision occurs, and we have created value into the `flattenFields`, removed them
 				if createFromHere {
-					index := flattenFieldsState[fieldName]
+					index := flattenFieldsState[tagConfig.fieldName]
 					flattenFields = append(flattenFields[:index], flattenFields[index+1:]...)
 				}
 			}
@@ -202,11 +232,18 @@ func FlattenJsonStructForMarshal(workItem reflect.Value) []*JSONStructField {
 			field := item.Type().Field(noneJsonfieldIndex)
 			if _, ok := flattenFieldsState[field.Name]; !ok {
 				flattenFieldsState[field.Name] = len(flattenFields)
-				flattenFields = append(flattenFields, &JSONStructField{
-					FieldName:  field.Name,
-					FieldValue: item.Field(noneJsonfieldIndex),
-					Options:    "",
-				})
+				result := &JSONStructField{
+					FieldName:    field.Name,
+					FieldValue:   item.Field(noneJsonfieldIndex),
+					FieldJsonTag: nil,
+				}
+				jsonTag, ok := field.Tag.Lookup("json")
+				if ok {
+					// no json tag field name but have option
+					tagConfig := GetFieldNameAndOptions(jsonTag)
+					result.FieldJsonTag = tagConfig
+				}
+				flattenFields = append(flattenFields, result)
 			}
 		}
 	}
