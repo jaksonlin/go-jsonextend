@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -142,7 +141,7 @@ func (s *PrettyPrintVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNod
 		s.sb.Write(node.Value)
 		return s.WriteSymbol()
 	} else {
-		content, err := json.Marshal(varVal)
+		content, err := Marshal(varVal)
 		if err != nil {
 			return ErrorInterpretVariable
 		}
