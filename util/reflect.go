@@ -48,6 +48,16 @@ type JSONStructField struct {
 	FieldJsonTag *JsonTagOptions
 }
 
+func (j *JSONStructField) ShouldDropFieldIfSetValue(valueToUnmarshal reflect.Value) bool {
+	if j.FieldJsonTag == nil {
+		return false
+	}
+	if j.FieldJsonTag.Omitempty && isEmptyValue(valueToUnmarshal) {
+		return true
+	}
+	return false
+}
+
 type JsonTagOptions struct {
 	Omitempty    bool
 	StringEncode bool
@@ -72,8 +82,8 @@ func GetFieldNameAndOptions(jsonTag string) *JsonTagOptions {
 	return ret
 }
 
-// this is for Unmarshal, because when unmarshall, we need to know the json key name;
-// but for marshaling using this map will lose the field order
+// this is for Unmarshal, the main differences relies on the fact that when unmarshalling, we cannot use workItem's value
+// and omityempty field to drop field that will be returned from here, as the values has not yet been unmarshal into the workItem
 func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStructField {
 	if workItem.Kind() != reflect.Struct {
 		return nil
@@ -118,10 +128,7 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 			}
 			tagConfig := GetFieldNameAndOptions(jsonTag)
 			fieldValue := item.Field(i)
-			// 3. check for omitempty
-			if shouldDropField(fieldValue, tagConfig) {
-				continue
-			}
+
 			// 4. check same level key collision
 			if createFromHere, ok := jsonTagFields[tagConfig.fieldName]; !ok {
 				jsonTagFields[tagConfig.fieldName] = false
@@ -156,10 +163,6 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 				if ok {
 					// no json tag field name but have option
 					tagConfig := GetFieldNameAndOptions(jsonTag)
-					// 3. check for omitempty
-					if shouldDropField(fieldValue, tagConfig) {
-						continue
-					}
 					flattenFields[field.Name].FieldJsonTag = tagConfig
 				}
 				flattenFields[field.Name] = result
@@ -203,7 +206,7 @@ func isEmptyValue(value reflect.Value) bool {
 	}
 }
 
-// FlattenJsonStruct flatten a struct into a list of JSONStructField
+// FlattenJsonStruct flatten a struct into a list of JSONStructField, will drop field base on json tag settings, as the workItem already have all the information set.
 func FlattenJsonStructForMarshal(workItem reflect.Value) []*JSONStructField {
 	if workItem.Kind() != reflect.Struct {
 		return nil

@@ -54,7 +54,9 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 		}
 		kvValueElementType = fieldInfo.FieldValue.Type()
 		tagOption = fieldInfo.FieldJsonTag
-
+		if tagOption.Omitempty && valueNode.ShouldOmitEmpty() {
+			return nil, nil
+		}
 	} else {
 		return nil, NewErrorInternalExpectingStructButFindOthers(kvParentElementType.Kind().String())
 	}

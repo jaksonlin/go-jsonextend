@@ -391,6 +391,11 @@ func (resolver *unmarshallResolver) VisitKeyValuePairNode(node *ast.JsonKeyValue
 		return err
 	}
 
+	if newResolver == nil {
+		// it is dropped due to omitempty
+		return nil
+	}
+
 	resolver.options.resolverStack.Push(newResolver)
 
 	return nil
