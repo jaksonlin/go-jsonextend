@@ -488,16 +488,17 @@ func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) er
 			}
 			resolver.setValue(floatValue)
 		case reflect.String:
-			var result string
-			err := resolver.options.unmarshaler(node.Value, &result)
-			if err != nil {
-				return err
-			}
+			var result string = string(node.Value)
 			decodedString, err := strconv.Unquote(result)
 			if err != nil {
 				return err
 			}
-			resolver.setValue(decodedString)
+			err = resolver.options.unmarshaler([]byte(decodedString), &result)
+			if err != nil {
+				return err
+			}
+
+			resolver.setValue(result)
 		default:
 			return ErrorUnsupportedDataKind
 		}

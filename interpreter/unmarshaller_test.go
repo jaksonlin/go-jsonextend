@@ -3965,6 +3965,7 @@ func TestStringOption2(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
+
 	err = json.Unmarshal(data, &checker)
 	if err != nil {
 		t.FailNow()
