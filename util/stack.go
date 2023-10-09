@@ -21,6 +21,25 @@ func (s *Stack[T]) GetSlice() []T {
 	return s.s
 }
 
+func (s *Stack[T]) IsEmpty() bool {
+	return len(s.s) == 0
+}
+
+func (s *Stack[T]) Clear() {
+	s.s = make([]T, 0)
+}
+
+func (s *Stack[T]) Clone() *Stack[T] {
+	return &Stack[T]{s.s}
+}
+
+func (s *Stack[T]) Get(i int) (T, error) {
+	if i < 0 || i >= len(s.s) {
+		return *new(T), ErrorEndOfStack
+	}
+	return s.s[i], nil
+}
+
 func NewStack[T any]() *Stack[T] {
 	return &Stack[T]{make([]T, 0)}
 }

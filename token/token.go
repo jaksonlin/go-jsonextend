@@ -48,6 +48,9 @@ func IsSymbolToken(t TokenType) bool {
 
 func GetTokenTypeByReflection(v *reflect.Value) TokenType {
 	rv := *v
+	if !rv.IsValid() {
+		return TOKEN_NULL
+	}
 	for rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
 			return TOKEN_NULL
@@ -67,6 +70,13 @@ func GetTokenTypeByReflection(v *reflect.Value) TokenType {
 		return TOKEN_LEFT_BRACKET
 	case reflect.Struct, reflect.Map:
 		return TOKEN_LEFT_BRACE
+	case reflect.Interface:
+		if rv.IsNil() {
+			return TOKEN_NULL
+		} else {
+			elem := rv.Elem()
+			return GetTokenTypeByReflection(&elem)
+		}
 	default:
 		return TOKEN_UNKNOWN
 	}

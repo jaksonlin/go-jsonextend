@@ -1,9 +1,13 @@
-package unmarshaler
+package interpreter
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"reflect"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/tokenizer"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -160,4 +164,27 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshale
 	actualValue := resolver.restoreValue().Elem()
 	valueItem.Elem().Set(actualValue.Convert(valueItem.Elem().Type()))
 	return nil
+}
+
+const maxDepth = 100
+
+func unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}, depth int) error {
+	if depth > maxDepth {
+		return errors.New("recursion depth exceeded")
+	}
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
+	err := sm.ProcessData()
+	if err != nil {
+		return err
+	}
+	if sm.GetASTBuilder().HasOpenElements() {
+		return errors.New("invalid json")
+	}
+	ast := sm.GetAST()
+	return UnmarshallAST(ast, variables, Marshal, func(v []byte, out interface{}) error {
+		return unmarshal(bytes.NewReader(v), variables, out, depth+1)
+	}, out)
+}
+func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}) error {
+	return unmarshal(reader, variables, out, 1)
 }

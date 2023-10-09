@@ -1,4 +1,4 @@
-package unmarshaler_test
+package interpreter_test
 
 import (
 	"encoding"
@@ -611,6 +611,38 @@ func TestStringOption(t *testing.T) {
 		IsOK:  false,
 	}
 	data, err := json.Marshal(b)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println("data: ", string(data))
+}
+func TestCyclic(t *testing.T) {
+
+	type test1 struct {
+		Hello           string
+		World           float64
+		World2          int
+		Apple           bool
+		Banana          bool
+		Something       interface{}
+		SomethingNotNil interface{}
+	}
+
+	type test2 struct {
+		Test1Data *test1
+	}
+	type test3 struct {
+		Test2Data test2
+	}
+	type testRoot struct {
+		Test3Data **test3
+	}
+
+	t1 := &test1{"Peter", 100.123, 100, true, false, nil, "1234"}
+	t2 := test2{t1}
+	t3 := &test3{t2}
+	tr := testRoot{&t3}
+	data, err := json.Marshal(tr)
 	if err != nil {
 		t.FailNow()
 	}

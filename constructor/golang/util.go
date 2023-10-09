@@ -44,8 +44,10 @@ func getMemoryAddress(v reflect.Value) uintptr {
 	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		return v.Pointer()
 	case reflect.Interface:
-		elem := v.Elem() // get the value from interface
-		return elem.UnsafeAddr()
+		if !v.IsNil() && v.Elem().CanAddr() {
+			return v.Elem().UnsafeAddr()
+		}
+		return v.UnsafeAddr()
 	default:
 		return v.UnsafeAddr()
 	}

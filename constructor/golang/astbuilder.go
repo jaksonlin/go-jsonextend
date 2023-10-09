@@ -12,7 +12,7 @@ type ASTGolangBaseBuilder struct {
 }
 
 func NewASTGolangBaseBuilder(obj interface{}) (constructor.ASTBuilder, error) {
-	provider, err := newTokenProvider(obj)
+	provider, err := newRootTokenProvider(obj)
 	if err != nil {
 		return nil, err
 	}

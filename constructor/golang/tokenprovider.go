@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -9,18 +10,22 @@ import (
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
+const maxDepth = 1000
+
 type workingItem struct {
 	reflectValue reflect.Value
 	tokenType    token.TokenType
+	path         []string
+	address      uintptr
 }
 
 type tokenProvider struct {
 	rootOut      reflect.Value
 	workingStack *util.Stack[*workingItem]
-	visited      map[uintptr]bool // check visited when pop
+	visited      map[uintptr][]string // check visited when pop
 }
 
-func newTokenProvider(out interface{}) (*tokenProvider, error) {
+func newRootTokenProvider(out interface{}) (*tokenProvider, error) {
 	s := util.NewStack[*workingItem]()
 	v := reflect.ValueOf(out)
 
@@ -28,18 +33,140 @@ func newTokenProvider(out interface{}) (*tokenProvider, error) {
 	if theTokenType == token.TOKEN_UNKNOWN {
 		return nil, ErrorUnknownData
 	}
-
-	s.Push(&workingItem{reflectValue: v, tokenType: theTokenType})
+	var addr uintptr
+	if v.CanAddr() {
+		addr = getMemoryAddress(v)
+	}
+	s.Push(&workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: []string{v.Kind().String()}})
 
 	return &tokenProvider{
 		rootOut:      v,
 		workingStack: s,
-		visited:      make(map[uintptr]bool),
+		visited:      make(map[uintptr][]string),
 	}, nil
+}
+
+func canNilKind(k reflect.Kind) bool {
+	return k == reflect.Interface || k == reflect.Ptr || k == reflect.Map || k == reflect.Slice
+}
+
+func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem) (*workingItem, error) {
+
+	theTokenType := token.GetTokenTypeByReflection(&v)
+	if theTokenType == token.TOKEN_UNKNOWN {
+		return nil, ErrorUnknownData
+	}
+	var addr uintptr = 0
+	if v.CanAddr() {
+		addr = getMemoryAddress(v)
+	}
+	itemType := v.Type()
+	kind := v.Kind()
+	addrable := v.CanAddr()
+	var sb strings.Builder
+	// Start by writing type and kind
+	sb.WriteString(fmt.Sprintf("key:%s(%s#%s)", key, itemType.Name(), kind))
+	// Handle different kinds and addressability
+	if canNilKind(kind) && v.IsNil() {
+		sb.WriteString("@nil->")
+		path := append(parent.path, sb.String())
+		return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path}, nil
+	}
+
+	if !addrable {
+		sb.WriteString(":unaddressable")
+		path := append(parent.path, sb.String())
+		return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path}, nil
+	}
+
+	if kind == reflect.Slice {
+		if v.Len() > 0 {
+			sb.WriteString(fmt.Sprintf("@%d:len=%d:cap=%d",
+				v.Index(0).UnsafeAddr(),
+				v.Len(),
+				v.Cap()))
+		} else {
+			sb.WriteString("@empty")
+		}
+	} else {
+		sb.WriteString(fmt.Sprintf("@%d", v.UnsafeAddr()))
+	}
+
+	// Arrow for the next element
+	sb.WriteString("->")
+
+	path := append(parent.path, sb.String())
+	return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path}, nil
+
+}
+func (t *tokenProvider) detectCyclicAccess(item *workingItem) error {
+	if item.address != 0 {
+		if paths, ok := t.visited[item.address]; ok {
+			currentPath := strings.Join(item.path, "->")
+			for _, path := range paths {
+				if strings.Contains(currentPath, path) {
+					return ErrorCyclicAccess
+				} else {
+					t.visited[item.address] = append(t.visited[item.address], currentPath)
+				}
+			}
+		} else {
+			t.visited[item.address] = make([]string, 0)
+			t.visited[item.address] = append(t.visited[item.address], strings.Join(item.path, "->"))
+		}
+	}
+	return nil
 }
 
 var _ constructor.TokenProvider = &tokenProvider{}
 
+func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
+
+	item, err := t.workingStack.Peek()
+	if err != nil {
+		return token.TOKEN_DUMMY, err
+	}
+	if item.tokenType == token.TOKEN_NULL {
+		return token.TOKEN_NULL, nil
+	}
+	if item.reflectValue.Kind() == reflect.Interface && !item.reflectValue.IsNil() {
+		item.reflectValue = item.reflectValue.Elem()
+	}
+	for item.reflectValue.Kind() == reflect.Pointer {
+		item.reflectValue = item.reflectValue.Elem()
+	}
+	if item.reflectValue.Kind() == reflect.Interface && !item.reflectValue.IsNil() {
+		item.reflectValue = item.reflectValue.Elem()
+	}
+	switch item.tokenType {
+	case token.TOKEN_LEFT_BRACKET:
+		if err := t.detectCyclicAccess(item); err != nil {
+			return token.TOKEN_DUMMY, err
+		}
+		t.workingStack.Pop()
+		t.processArrayItem(item)
+		return item.tokenType, nil
+	case token.TOKEN_LEFT_BRACE:
+		if err := t.detectCyclicAccess(item); err != nil {
+			return token.TOKEN_DUMMY, err
+		}
+		t.workingStack.Pop()
+		err := t.processObjectItem(item)
+		if err != nil {
+			return token.TOKEN_DUMMY, err
+		}
+		return item.tokenType, nil
+	case token.TOKEN_RIGHT_BRACE:
+		fallthrough
+	case token.TOKEN_RIGHT_BRACKET:
+		t.workingStack.Pop()
+		return item.tokenType, nil
+	default:
+		// for primitives, they will be pop when ReadXXX is requested, and we have already marked them visit
+		return item.tokenType, nil
+	}
+
+}
 func (t *tokenProvider) processArrayItem(item *workingItem) error {
 	len := item.reflectValue.Len()
 	// push the end tag
@@ -50,80 +177,11 @@ func (t *tokenProvider) processArrayItem(item *workingItem) error {
 		if theTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
-		t.workingStack.Push(&workingItem{reflectValue: element, tokenType: theTokenType})
-	}
-	return nil
-}
-
-// for json tag `string`, convert to json for primitive data type
-func (t *tokenProvider) parseJsonStringConfig(tokenType token.TokenType, value reflect.Value) error {
-	if tokenType == token.TOKEN_BOOLEAN || tokenType == token.TOKEN_NUMBER || tokenType == token.TOKEN_STRING {
-		payload, err := util.EncodePrimitiveValue(value.Interface())
+		newItem, err := newContainerWorkingItem(fmt.Sprintf("%d", i), element, item)
 		if err != nil {
 			return err
 		}
-		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(payload), tokenType: token.TOKEN_STRING})
-		return nil
-	} else {
-		return ErrorStringConfigTypeInvalid
-	}
-}
-
-func (t *tokenProvider) parseJsonFieldInfo(jsonTagFieldName string, defaultFieldName string, inUsedKey map[string]bool) error {
-	fieldName := strings.TrimSpace(jsonTagFieldName)
-	if len(fieldName) == 0 {
-		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(defaultFieldName), tokenType: token.TOKEN_STRING})
-	} else {
-		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(fieldName), tokenType: token.TOKEN_STRING})
-	}
-	return nil
-}
-
-func (t *tokenProvider) parseJsonTag(defaultFieldName, jsonTag string, valueTokenType token.TokenType, value reflect.Value, inUsedKey map[string]bool) error {
-	if jsonTag == "-" {
-		return nil
-	}
-	jsonTagConfig := strings.SplitN(jsonTag, ",", 2)
-	if len(jsonTagConfig) == 0 {
-		return ErrorInvalidJsonTag
-	}
-	if len(jsonTagConfig) == 1 {
-		t.workingStack.Push(&workingItem{reflectValue: value, tokenType: valueTokenType})
-	} else {
-		fieldOption := strings.TrimSpace(jsonTagConfig[1])
-		if fieldOption == "omitempty" && value.IsZero() {
-			return nil
-		}
-		// set the value first
-		if fieldOption == "string" {
-			err := t.parseJsonStringConfig(valueTokenType, value)
-			if err != nil {
-				return err
-			}
-		} else {
-			t.workingStack.Push(&workingItem{reflectValue: value, tokenType: valueTokenType})
-		}
-	}
-	return t.parseJsonFieldInfo(jsonTagConfig[0], defaultFieldName, inUsedKey)
-}
-
-func (t *tokenProvider) processStructField(field reflect.StructField, element reflect.Value, inUsedKey map[string]bool) error {
-	valueTokenType := token.GetTokenTypeByReflection(&element)
-	if valueTokenType == token.TOKEN_UNKNOWN {
-		return ErrorInvalidTypeOnExportedField
-	}
-
-	jsonTag, ok := field.Tag.Lookup("json")
-	if !ok {
-		inUsedKey[field.Name] = true
-		// in stack value first then key
-		t.workingStack.Push(&workingItem{reflectValue: element, tokenType: valueTokenType})
-		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(field.Name), tokenType: token.TOKEN_STRING})
-	} else {
-		err := t.parseJsonTag(field.Name, jsonTag, valueTokenType, element, inUsedKey)
-		if err != nil {
-			return err
-		}
+		t.workingStack.Push(newItem)
 	}
 	return nil
 }
@@ -137,7 +195,16 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 			return ErrorInvalidTypeOnExportedField
 		}
 
-		t.workingStack.Push(&workingItem{reflectValue: val.FieldValue, tokenType: valueTokenType})
+		if valueTokenType == token.TOKEN_LEFT_BRACE || valueTokenType == token.TOKEN_LEFT_BRACKET {
+			// for none primitive type, we need to track the path
+			newItem, err := newContainerWorkingItem(val.FieldName, val.FieldValue, workItem)
+			if err != nil {
+				return err
+			}
+			t.workingStack.Push(newItem)
+		} else {
+			t.workingStack.Push(&workingItem{reflectValue: val.FieldValue, tokenType: valueTokenType})
+		}
 		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(val.FieldName), tokenType: token.TOKEN_STRING})
 	}
 	return nil
@@ -185,62 +252,6 @@ func (t *tokenProvider) processObjectItem(item *workingItem) error {
 
 }
 
-func (t *tokenProvider) detectCyclicAccess(item *workingItem) error {
-	if item.reflectValue.CanAddr() {
-		addr := getMemoryAddress(item.reflectValue)
-		if _, ok := t.visited[addr]; ok {
-			return ErrorCyclicAccess
-		} else {
-			t.visited[addr] = true
-		}
-	}
-	return nil
-}
-
-func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
-
-	item, err := t.workingStack.Peek()
-	if err != nil {
-		return token.TOKEN_DUMMY, err
-	}
-	if item.tokenType == token.TOKEN_NULL {
-		return token.TOKEN_NULL, nil
-	}
-
-	for item.reflectValue.Kind() == reflect.Pointer {
-		item.reflectValue = item.reflectValue.Elem()
-	}
-
-	switch item.tokenType {
-	case token.TOKEN_LEFT_BRACKET:
-		if err := t.detectCyclicAccess(item); err != nil {
-			return token.TOKEN_DUMMY, err
-		}
-		t.workingStack.Pop()
-		t.processArrayItem(item)
-		return item.tokenType, nil
-	case token.TOKEN_LEFT_BRACE:
-		if err := t.detectCyclicAccess(item); err != nil {
-			return token.TOKEN_DUMMY, err
-		}
-		t.workingStack.Pop()
-		err := t.processObjectItem(item)
-		if err != nil {
-			return token.TOKEN_DUMMY, err
-		}
-		return item.tokenType, nil
-	case token.TOKEN_RIGHT_BRACE:
-		fallthrough
-	case token.TOKEN_RIGHT_BRACKET:
-		t.workingStack.Pop()
-		return item.tokenType, nil
-	default:
-		// for primitives, they will be pop when ReadXXX is requested, and we have already marked them visit
-		return item.tokenType, nil
-	}
-
-}
-
 func (t *tokenProvider) ReadNull() error {
 	_, err := t.workingStack.Pop()
 	if err != nil {
@@ -254,6 +265,7 @@ func (t *tokenProvider) ReadBool() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	val := item.reflectValue.Bool()
 	return val, nil
 }

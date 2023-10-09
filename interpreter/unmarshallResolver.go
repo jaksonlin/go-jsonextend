@@ -1,4 +1,4 @@
-package unmarshaler
+package interpreter
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/interpreter"
 	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
@@ -340,7 +339,7 @@ func (resolver *unmarshallResolver) resolveByCustomizeObjectUnmarshal(node ast.J
 
 	unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
 
-	payload, err := interpreter.InterpretAST(node, resolver.options.variables, resolver.options.marshaler)
+	payload, err := InterpretAST(node, resolver.options.variables, resolver.options.marshaler)
 	if err != nil {
 		return err
 	}

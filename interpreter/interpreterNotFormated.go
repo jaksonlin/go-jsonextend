@@ -146,6 +146,10 @@ func (s *standardVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) 
 
 func (s *standardVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
 	s.sb.WriteByte('[')
+	if len(node.Value) == 0 {
+		s.stackFormat.Push(']')
+		return s.WriteSymbol()
+	}
 
 	for i := len(node.Value) - 1; i >= 0; i-- {
 		s.stackNode.Push(node.Value[i])
@@ -172,6 +176,10 @@ func (s *standardVisitor) GetOutput() []byte {
 
 func (s *standardVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	s.sb.WriteByte('{')
+	if len(node.Value) == 0 {
+		s.stackFormat.Push('}')
+		return s.WriteSymbol()
+	}
 	for i := len(node.Value) - 1; i >= 0; i-- {
 		s.stackNode.Push(node.Value[i])
 		if i == len(node.Value)-1 { // stack, first in last out
