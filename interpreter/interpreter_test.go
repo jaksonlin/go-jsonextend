@@ -143,7 +143,7 @@ func TestOmit(t *testing.T) {
 	}
 
 	type Data struct {
-		StringField    string            `json:"stringField,omitempty,string"`
+		StringField    string            `json:"stringField,omitempty"`
 		IntField       int               `json:"intField,omitempty"`
 		BoolField      bool              `json:"boolField,omitempty"`
 		SliceField     []string          `json:"sliceField,omitempty"`
@@ -158,9 +158,43 @@ func TestOmit(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	if !bytes.Equal(result, []byte(`{}`)) {
+	result2, err := json.Marshal(d)
+	if err != nil {
 		t.FailNow()
 	}
-	fmt.Println(string(result))
+	if !bytes.Equal(result, result2) {
+		t.FailNow()
+	}
+
+}
+
+func TestOmit2(t *testing.T) {
+	type AnotherData struct {
+		Name string
+	}
+
+	type Data struct {
+		StringField    *string            `json:"stringField,omitempty"`
+		IntField       *int               `json:"intField,omitempty"`
+		BoolField      *bool              `json:"boolField,omitempty"`
+		SliceField     *[]string          `json:"sliceField,omitempty"`
+		MapField       *map[string]string `json:"mapField,omitempty"`
+		PointerField   *string            `json:"pointerField,omitempty"`
+		StructField    *AnotherData       `json:"structField,omitempty"`
+		InterfaceField *interface{}       `json:"interfaceField,omitempty"`
+	}
+
+	d := Data{}
+	result, err := interpreter.Marshal(d)
+	if err != nil {
+		t.FailNow()
+	}
+	result2, err := json.Marshal(d)
+	if err != nil {
+		t.FailNow()
+	}
+	if !bytes.Equal(result, result2) {
+		t.FailNow()
+	}
 
 }
