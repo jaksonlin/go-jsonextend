@@ -2,10 +2,13 @@ package interpreter
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"strconv"
 	"strings"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/tokenizer"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -233,4 +236,17 @@ func PrettyInterpret(node ast.JsonNode, variables map[string]interface{}, marsha
 	}
 	rs := visitor.GetOutput()
 	return rs, nil
+}
+
+func ParseJsonExtendDocument(reader io.Reader, variables map[string]interface{}) ([]byte, error) {
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
+	err := sm.ProcessData()
+	if err != nil {
+		return nil, err
+	}
+	if sm.GetASTBuilder().HasOpenElements() {
+		return nil, errors.New("invalid json")
+	}
+	ast := sm.GetAST()
+	return PrettyInterpret(ast, variables, Marshal)
 }
