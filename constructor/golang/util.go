@@ -87,3 +87,13 @@ func convertNumberBaseOnKind(val reflect.Value) (float64, error) {
 		return 0.0, ErrNotNumericValueField
 	}
 }
+
+func isUint8Array(v reflect.Value) bool {
+	if v.Kind() != reflect.Slice {
+		return false
+	}
+	if v.Type().Elem().Kind() != reflect.Uint8 {
+		return false
+	}
+	return true
+}

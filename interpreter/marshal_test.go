@@ -1,6 +1,8 @@
 package interpreter_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -105,4 +107,111 @@ func TestCyclicAccess3(t *testing.T) {
 	}
 	fmt.Println(data)
 
+}
+
+func TestStringOptionMarshal(t *testing.T) {
+
+	type Example struct {
+		F1 string `json:",string"`
+		F2 int    `json:",string"`
+		F3 bool   `json:",string"`
+		F4 []byte `json:","`
+		F5 []byte `json:",string"`
+	}
+
+	ex := Example{"hello", 123, true, []byte("hello"), []byte("hello")}
+	var checker Example
+	data, err := testMarshaler(ex)
+	if err != nil {
+		t.FailNow()
+	}
+
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = interpreter.UnmarshallAST(node, nil, testMarshaler, testUnmarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+	if myReceiver.F3 != checker.F3 {
+		t.FailNow()
+	}
+}
+
+func TestOmitEmptyOptionMarshal(t *testing.T) {
+
+	type Example struct {
+		F1 string      `json:",omitempty"`
+		F2 int         `json:",omitempty"`
+		F3 bool        `json:",omitempty"`
+		F4 []byte      `json:",omitempty"`
+		F5 interface{} `json:",omitempty"`
+		F6 [3]string   `json:",omitempty"`
+	}
+
+	ex := Example{}
+	var checker Example
+	data, err := testMarshaler(ex)
+	if err != nil {
+		t.FailNow()
+	}
+	data2, err := json.Marshal(ex)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println(data2)
+	if !bytes.Equal(data, data2) {
+		t.FailNow()
+	}
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = interpreter.UnmarshallAST(node, nil, testMarshaler, testUnmarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+	if myReceiver.F3 != checker.F3 {
+		t.FailNow()
+	}
+	if myReceiver.F4 != nil {
+		t.FailNow()
+	}
+	if myReceiver.F5 != nil {
+		t.FailNow()
+	}
+	if myReceiver.F6 != [3]string{} {
+		t.FailNow()
+	}
 }

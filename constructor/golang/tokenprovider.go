@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"strings"
@@ -145,13 +146,21 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 			return token.TOKEN_DUMMY, err
 		}
 		t.workingStack.Pop()
-		t.processArrayItem(item)
-		return item.tokenType, nil
+		if isUint8Array(item.reflectValue) {
+			// for uint8 array, we need to convert it to base64 string
+			encodedValue := base64.StdEncoding.EncodeToString(item.reflectValue.Bytes())
+			t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(encodedValue), tokenType: token.TOKEN_STRING})
+			return token.TOKEN_STRING, nil
+		} else {
+			t.processArrayItem(item)
+			return item.tokenType, nil
+		}
 	case token.TOKEN_LEFT_BRACE:
 		if err := t.detectCyclicAccess(item); err != nil {
 			return token.TOKEN_DUMMY, err
 		}
 		t.workingStack.Pop()
+
 		err := t.processObjectItem(item)
 		if err != nil {
 			return token.TOKEN_DUMMY, err
@@ -169,6 +178,7 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 
 }
 func (t *tokenProvider) processArrayItem(item *workingItem) error {
+
 	len := item.reflectValue.Len()
 	// push the end tag
 	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACKET})
@@ -204,7 +214,7 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 			}
 			t.workingStack.Push(newItem)
 		} else {
-			// when the field require string encode, return the tokenType as string instead of the primitive type
+			// when the primitive field require string encode, return the tokenType as string instead of the primitive type
 			if val.FieldJsonTag != nil && val.FieldJsonTag.StringEncode {
 				encodedValue, err := util.EncodePrimitiveValue(val.FieldValue.Interface())
 				if err != nil {
