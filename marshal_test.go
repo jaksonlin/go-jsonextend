@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/jaksonlin/go-jsonextend"
@@ -229,4 +230,15 @@ func TestMarshalObjEmbedSameName(t *testing.T) {
 	if !bytes.Equal(rs1, rs2) {
 		t.FailNow()
 	}
+}
+
+func TestOutput(t *testing.T) {
+	template := `{"hello": "world", "name": "this is my ${name}", "age": ${age}}`
+	variables := map[string]interface{}{"name": "jakson", "age": 18}
+
+	result, err := jsonextend.Parse(strings.NewReader(template), variables)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(result))
 }
