@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"encoding/json"
 	"reflect"
 	"strconv"
 
@@ -14,13 +13,17 @@ type unmarshallOptions struct {
 	ensureInt     bool
 	resolverStack *util.Stack[*unmarshallResolver]
 	variables     map[string]interface{}
+	marshaler     ast.MarshalerFunc
+	unmarshaler   ast.UnmarshalerFunc
 }
 
-func NewUnMarshallOptions(variables map[string]interface{}) *unmarshallOptions {
+func NewUnMarshallOptions(variables map[string]interface{}, marshaler ast.MarshalerFunc, unmarshaler ast.UnmarshalerFunc) *unmarshallOptions {
 	options := &unmarshallOptions{
-		ensureInt:     true,
+		ensureInt:     false,
 		variables:     variables,
 		resolverStack: util.NewStack[*unmarshallResolver](),
+		marshaler:     marshaler,
+		unmarshaler:   unmarshaler,
 	}
 	return options
 }
@@ -43,7 +46,7 @@ func resolveStringVariable(stringVariable *ast.JsonExtendedStringWIthVariableNod
 		if !ok {
 			continue
 		}
-		variableValueBytes, err := json.Marshal(variableValue)
+		variableValueBytes, err := resolver.marshaler(variableValue)
 		if err != nil {
 			return nil, err
 		}

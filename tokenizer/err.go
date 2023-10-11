@@ -17,7 +17,6 @@ var (
 	ErrorUnexpectedEOF                     = errors.New("unexpected EOF")
 	ErrorTokenRouteNotConfigure            = errors.New("token route not configure")
 	ErrorExtendedVariableFormatIncorrect   = errors.New("variable should be of ${variableName} format")
-	ErrorIncorrectToken                    = errors.New("")
 )
 
 func NewErrorIncorrectToken(mode StateMode, token token.TokenType) error {

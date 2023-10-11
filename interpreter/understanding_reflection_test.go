@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -519,4 +520,131 @@ func TestMapKey(t *testing.T) {
 		t.FailNow()
 	}
 
+}
+
+func TestEmbedTag(t *testing.T) {
+	type apple struct {
+		Name string `json:"apple_name"`
+		Age  int
+	}
+	type banana struct {
+		apple
+		Name2 string `json:"apple_name"`
+		Age2  int
+	}
+	var b banana = banana{
+		apple: apple{
+			Name: "Pipe", Age: 100,
+		},
+		Name2: "OWW",
+		Age2:  111,
+	}
+	data, _ := json.Marshal(b)
+	fmt.Println(data)
+}
+func TestEmbedTag2(t *testing.T) {
+
+	type banana struct {
+		Name2 string `json:"apple_name"`
+		Age2  int
+		Ch    chan int
+	}
+	var b banana = banana{
+		Name2: "OWW",
+		Age2:  111,
+		Ch:    make(chan int),
+	}
+	_, err := json.Marshal(b)
+	if err == nil {
+		t.FailNow()
+	}
+}
+func TestArrayElement(t *testing.T) {
+	b := []interface{}{1, 2, 3, make(chan int), 4, 5}
+
+	_, err := json.Marshal(b)
+	if err == nil {
+		t.FailNow()
+	}
+}
+func TestBytesString(t *testing.T) {
+	f := "abc"
+	a := reflect.ValueOf(f)
+	data := a.String()
+
+	fmt.Println(data)
+}
+
+func TestConfigExtract(t *testing.T) {
+	config := ","
+	s := strings.SplitN(config, ",", 2)
+	println(len(s))
+}
+
+func TestFlag(t *testing.T) {
+	type flag uint32
+	const (
+		flagKindWidth        = 5 // there are 27 kinds
+		flagKindMask    flag = 1<<flagKindWidth - 1
+		flagStickyRO    flag = 1 << 5
+		flagEmbedRO     flag = 1 << 6
+		flagIndir       flag = 1 << 7
+		flagAddr        flag = 1 << 8
+		flagMethod      flag = 1 << 9
+		flagMethodShift      = 10
+		flagRO          flag = flagStickyRO | flagEmbedRO
+	)
+	//var testFlag flag = 0b0010101100
+	fmt.Printf("%b", flagKindMask)
+
+}
+func TestStringOption(t *testing.T) {
+
+	type banana struct {
+		Name2 string `json:",string"`
+		Age2  int    `json:",string"`
+		IsOK  bool   `json:",string"`
+	}
+	var b banana = banana{
+		Name2: "OWW",
+		Age2:  111,
+		IsOK:  false,
+	}
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println("data: ", string(data))
+}
+func TestCyclic(t *testing.T) {
+
+	type test1 struct {
+		Hello           string
+		World           float64
+		World2          int
+		Apple           bool
+		Banana          bool
+		Something       interface{}
+		SomethingNotNil interface{}
+	}
+
+	type test2 struct {
+		Test1Data *test1
+	}
+	type test3 struct {
+		Test2Data test2
+	}
+	type testRoot struct {
+		Test3Data **test3
+	}
+
+	t1 := &test1{"Peter", 100.123, 100, true, false, nil, "1234"}
+	t2 := test2{t1}
+	t3 := &test3{t2}
+	tr := testRoot{&t3}
+	data, err := json.Marshal(tr)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println("data: ", string(data))
 }

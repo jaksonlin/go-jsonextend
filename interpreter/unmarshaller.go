@@ -1,9 +1,13 @@
 package interpreter
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"reflect"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/tokenizer"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -22,39 +26,43 @@ func (resolver *unmarshallResolver) processKVKeyNode(node ast.JsonStringValueNod
 	return key, nil
 }
 
-func (resolver *unmarshallResolver) getFieldByTag(objKey string) (reflect.Value, error) {
-	resolver.getAllFields()
+func (resolver *unmarshallResolver) getFieldByTag(objKey string) (*util.JSONStructField, error) {
+	resolver.collectAllFields()
 	fieldInfo, ok := resolver.fields[objKey]
 	if !ok {
-		return reflect.Value{}, NewErrorFieldNotValid(objKey)
+		return nil, NewErrorFieldNotValid(objKey)
 	}
 	return fieldInfo, nil
 }
 
 // create resolver to resolving the things in kv's value
 func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast.JsonNode) (*unmarshallResolver, error) {
-	// create child resolver by data type
-	var childElementType reflect.Type = resolver.ptrToActualValue.Elem().Type()
-	// can only be map/struct to hold the kv
+	// check if the root is a struct or map to hold our kv pair
+	var kvParentElementType reflect.Type = resolver.ptrToActualValue.Elem().Type()
 
-	if childElementType.Kind() == reflect.Map {
+	var kvValueElementType reflect.Type = nil
+	var tagOption *util.JsonTagOptions
+	if kvParentElementType.Kind() == reflect.Map {
+		// when parent is a map, the child element type is the map's value type
+		kvValueElementType = kvParentElementType.Elem()
 
-		childElementType = resolver.ptrToActualValue.Type().Elem().Elem()
-
-	} else if childElementType.Kind() == reflect.Struct {
-
+	} else if kvParentElementType.Kind() == reflect.Struct {
+		// when parent is a struct, the child element type is the struct's field type
 		fieldInfo, err := resolver.getFieldByTag(key) // struct field
 		if err != nil {
 			return nil, err
 		}
-		childElementType = fieldInfo.Type()
-
+		kvValueElementType = fieldInfo.FieldValue.Type()
+		tagOption = fieldInfo.FieldJsonTag
+		if tagOption != nil && tagOption.Omitempty && valueNode.ShouldOmitEmpty() {
+			return nil, nil
+		}
 	} else {
-		return nil, NewErrorInternalExpectingStructButFindOthers(childElementType.Kind().String())
+		return nil, NewErrorInternalExpectingStructButFindOthers(kvParentElementType.Kind().String())
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver, err := newUnmarshallResolver(valueNode, childElementType, resolver.options)
+	newResolver, err := newUnmarshallResolver(valueNode, kvValueElementType, resolver.options, tagOption)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +86,7 @@ func (resolver *unmarshallResolver) createArrayElementResolver(index int, node a
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options)
+	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -107,16 +115,17 @@ func (resolver *unmarshallResolver) process() error {
 	return node.Visit(resolver)
 }
 
-func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out interface{}) error {
+// use marshaler to deal with the string variable/variable, use unmarshaler to deal with the json tag `string` option
+func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshaler ast.MarshalerFunc, unmarshaler ast.UnmarshalerFunc, out interface{}) error {
 	// deep first traverse the AST
 	valueItem := reflect.ValueOf(out)
 	if valueItem.Kind() != reflect.Pointer || valueItem.IsNil() {
 		return ErrOutNotPointer
 	}
 
-	options := NewUnMarshallOptions(variables)
+	options := NewUnMarshallOptions(variables, marshaler, unmarshaler)
 	traverseStack := options.resolverStack
-	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options)
+	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options, nil)
 	if err != nil {
 		return err
 	}
@@ -157,4 +166,27 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, out inte
 	actualValue := resolver.restoreValue().Elem()
 	valueItem.Elem().Set(actualValue.Convert(valueItem.Elem().Type()))
 	return nil
+}
+
+const maxDepth = 100
+
+func unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}, depth int) error {
+	if depth > maxDepth {
+		return errors.New("recursion depth exceeded")
+	}
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
+	err := sm.ProcessData()
+	if err != nil {
+		return err
+	}
+	if sm.GetASTBuilder().HasOpenElements() {
+		return errors.New("invalid json")
+	}
+	ast := sm.GetAST()
+	return UnmarshallAST(ast, variables, Marshal, func(v []byte, out interface{}) error {
+		return unmarshal(bytes.NewReader(v), variables, out, depth+1)
+	}, out)
+}
+func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}) error {
+	return unmarshal(reader, variables, out, 1)
 }

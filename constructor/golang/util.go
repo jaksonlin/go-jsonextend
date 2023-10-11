@@ -4,8 +4,6 @@ import (
 	"html"
 	"reflect"
 	"strconv"
-	"unicode/utf8"
-	"unsafe"
 )
 
 // string to number receiver
@@ -45,28 +43,40 @@ func getMemoryAddress(v reflect.Value) uintptr {
 	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		return v.Pointer()
 	case reflect.Interface:
-		return uintptr(unsafe.Pointer(v.UnsafeAddr()))
+		if !v.IsNil() && v.Elem().CanAddr() {
+			return v.Elem().UnsafeAddr()
+		}
+		return v.UnsafeAddr()
 	default:
 		return v.UnsafeAddr()
 	}
 }
 
-// repair string as json standard request
-func repairUTF8(s string) string {
-	if utf8.ValidString(s) {
-		return s // Already valid UTF-8.
-	}
-
-	var repaired []rune
-	for len(s) > 0 {
-		r, size := utf8.DecodeRuneInString(s)
-		repaired = append(repaired, r)
-		s = s[size:]
-	}
-
-	return string(repaired)
-}
-
 func htmlEscape(s string) string {
 	return html.EscapeString(s)
+}
+
+// json input value is always float64, convert to different numeric value based on out element kind
+func convertNumberBaseOnKind(val reflect.Value) (float64, error) {
+
+	switch val.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return float64(val.Int()), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return float64(val.Uint()), nil
+	case reflect.Float32, reflect.Float64:
+		return val.Float(), nil
+	default:
+		return 0.0, ErrNotNumericValueField
+	}
+}
+
+func isUint8Array(v reflect.Value) bool {
+	if v.Kind() != reflect.Slice {
+		return false
+	}
+	if v.Type().Elem().Kind() != reflect.Uint8 {
+		return false
+	}
+	return true
 }

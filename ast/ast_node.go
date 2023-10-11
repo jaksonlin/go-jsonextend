@@ -2,7 +2,9 @@ package ast
 
 import (
 	"encoding/base64"
+	"fmt"
 
+	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -26,7 +28,26 @@ const (
 	AST_NODE_UNDEFINED     AST_NODETYPE = 210
 )
 
-func nodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
+func ConvertTokenTypeToNodeType(t token.TokenType) AST_NODETYPE {
+	switch t {
+	case token.TOKEN_BOOLEAN:
+		return AST_NUMBER
+	case token.TOKEN_STRING:
+		return AST_STRING
+	case token.TOKEN_NUMBER:
+		return AST_NUMBER
+	case token.TOKEN_NULL:
+		return AST_NULL
+	case token.TOKEN_VARIABLE:
+		return AST_VARIABLE
+	case token.TOKEN_STRING_WITH_VARIABLE:
+		return AST_STRING_VARIABLE
+	default:
+		return AST_NODE_UNDEFINED
+	}
+}
+
+func NodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 
 	switch t {
 	case AST_ARRAY:
@@ -95,6 +116,8 @@ type JsonVisitor interface {
 type JsonNode interface {
 	GetNodeType() AST_NODETYPE
 	Visit(visitor JsonVisitor) error
+	String() string
+	ShouldOmitEmpty() bool
 }
 
 type JsonCollectionNode interface {
@@ -119,6 +142,14 @@ func (node *JsonStringNode) GetNodeType() AST_NODETYPE {
 
 func (node *JsonStringNode) Visit(visitor JsonVisitor) error {
 	return visitor.VisitStringNode(node)
+}
+
+func (node *JsonStringNode) String() string {
+	return fmt.Sprintf("string node, value: %s\n", node.Value)
+}
+
+func (node *JsonStringNode) ShouldOmitEmpty() bool {
+	return len(node.Value) == 2
 }
 
 func (node *JsonStringNode) GetValue() string {
@@ -162,6 +193,14 @@ func (node *JsonNumberNode) Visit(visitor JsonVisitor) error {
 	return visitor.VisitNumberNode(node)
 }
 
+func (node *JsonNumberNode) String() string {
+	return fmt.Sprintf("number node, value: %f\n", node.Value)
+}
+
+func (node *JsonNumberNode) ShouldOmitEmpty() bool {
+	return node.Value == 0
+}
+
 type JsonBooleanNode struct {
 	Value bool
 }
@@ -176,6 +215,14 @@ func (node *JsonBooleanNode) Visit(visitor JsonVisitor) error {
 	return visitor.VisitBooleanNode(node)
 }
 
+func (node *JsonBooleanNode) String() string {
+	return fmt.Sprintf("boolean node, value: %t\n", node.Value)
+}
+
+func (node *JsonBooleanNode) ShouldOmitEmpty() bool {
+	return !node.Value
+}
+
 type JsonNullNode struct {
 	Value interface{}
 }
@@ -188,6 +235,14 @@ func (node *JsonNullNode) GetNodeType() AST_NODETYPE {
 
 func (node *JsonNullNode) Visit(visitor JsonVisitor) error {
 	return visitor.VisitNullNode(node)
+}
+
+func (node *JsonNullNode) String() string {
+	return fmt.Sprintf("null node, value: %v\n", node.Value)
+}
+
+func (node *JsonNullNode) ShouldOmitEmpty() bool {
+	return true
 }
 
 type JsonArrayNode struct {
@@ -212,6 +267,14 @@ func (node *JsonArrayNode) Length() int {
 	return len(node.Value)
 }
 
+func (node *JsonArrayNode) String() string {
+	return fmt.Sprintf("array node, length: %d\n", len(node.Value))
+}
+
+func (node *JsonArrayNode) ShouldOmitEmpty() bool {
+	return len(node.Value) == 0
+}
+
 type JsonKeyValuePairNode struct {
 	Key   JsonStringValueNode
 	Value JsonNode
@@ -229,6 +292,14 @@ func (node *JsonKeyValuePairNode) Visit(visitor JsonVisitor) error {
 
 func (node *JsonKeyValuePairNode) IsFilled() bool {
 	return node.Value != nil
+}
+
+func (node *JsonKeyValuePairNode) String() string {
+	return fmt.Sprintf("key value pair node, key: [%s], value: [%s]\n", node.Key.String(), node.Value.String())
+}
+
+func (node *JsonKeyValuePairNode) ShouldOmitEmpty() bool {
+	return node.Value == nil || node.Value.ShouldOmitEmpty()
 }
 
 type JsonObjectNode struct {
@@ -253,6 +324,14 @@ func (node *JsonObjectNode) Length() int {
 	return len(node.Value)
 }
 
+func (node *JsonObjectNode) String() string {
+	return fmt.Sprintf("object node, length: %d\n", len(node.Value))
+}
+
+func (node *JsonObjectNode) ShouldOmitEmpty() bool {
+	return false // struct should not omit empty
+}
+
 type JsonExtendedVariableNode struct {
 	Value    []byte
 	Variable string
@@ -271,6 +350,17 @@ func (node *JsonExtendedVariableNode) Visit(visitor JsonVisitor) error {
 func (node *JsonExtendedVariableNode) extractVariable() {
 	rs := util.RegStringWithVariable.FindSubmatch(node.Value)
 	node.Variable = string(rs[1])
+}
+
+func (node *JsonExtendedVariableNode) String() string {
+	return fmt.Sprintf("variable node, value: %s\n", node.Value)
+}
+
+func (node *JsonExtendedVariableNode) ShouldOmitEmpty() bool {
+	// this really depends on what content user put in the variable
+	// for primitive types, we can do omity empty, for slice, object the same as well
+	// as a TODO
+	return false
 }
 
 type JsonExtendedStringWIthVariableNode struct {
@@ -300,4 +390,15 @@ func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
 
 func (node *JsonExtendedStringWIthVariableNode) GetValue() string {
 	return node.JsonStringNode.GetValue()
+}
+
+func (node *JsonExtendedStringWIthVariableNode) String() string {
+	return fmt.Sprintf("string with variable node, value: %s\n", node.Value)
+}
+
+func (node *JsonExtendedStringWIthVariableNode) ShouldOmitEmpty() bool {
+	// this really depends on what content user put in the variable
+	// for primitive types, we can do omity empty, for slice, object the same as well
+	// as a TODO
+	return false
 }

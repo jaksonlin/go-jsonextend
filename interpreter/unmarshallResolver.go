@@ -1,10 +1,12 @@
 package interpreter
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -25,44 +27,23 @@ type unmarshallResolver struct {
 	objectKey            string
 	parent               *unmarshallResolver
 	ptrToActualValue     reflect.Value // single ptr to no matter what actual value is (for *****int, keeps only *int to the actual value)
-	fields               map[string]reflect.Value
+	fields               map[string]*util.JSONStructField
 	hasUnmarshaller      bool
+	tagOption            *util.JsonTagOptions
 }
 
-func (resolver *unmarshallResolver) getAllFields() {
+func (resolver *unmarshallResolver) collectAllFields() error {
 	if len(resolver.fields) > 0 {
-		return
+		return nil
 	}
-	resolver.fields = make(map[string]reflect.Value)
-	s := util.NewStack[reflect.Value]()
-	s.Push(resolver.ptrToActualValue.Elem())
 
-	for {
-		item, err := s.Pop()
-		if err != nil {
-			break
-		}
-		for i := 0; i < item.NumField(); i++ {
-			fieldType := item.Type().Field(i)
-
-			fieldValue := item.Field(i)
-			if fieldType.Anonymous {
-				s.Push(fieldValue)
-				continue
-			}
-			if !fieldType.IsExported() || !fieldValue.IsValid() || !fieldValue.CanSet() {
-				continue
-			}
-
-			resolver.fields[fieldType.Name] = fieldValue
-			jsonTag := fieldType.Tag.Get("json")
-			if jsonTag != "" {
-				resolver.fields[jsonTag] = fieldValue
-			}
-
-		}
-
+	result := util.FlattenJsonStructForUnmarshal(resolver.ptrToActualValue.Elem())
+	if result == nil {
+		return NewErrorInternalExpectingStructButFindOthers(resolver.ptrToActualValue.Elem().Kind().String())
 	}
+	resolver.fields = result
+	return nil
+
 }
 
 // a story for align to the go's json unmarshall is that, when the field is a pointer, and it points to a nil value, the unmarshall will resolve to a `nil pointer` not `pointer to nil value`
@@ -88,9 +69,9 @@ func (resolver *unmarshallResolver) resolveStructDependency(dependentResolver *u
 	if dependentResolver.IsNil || dependentResolver.isPointerValue && (dependentValue.Elem().Kind() == reflect.Slice ||
 		dependentValue.Elem().Kind() == reflect.Interface ||
 		dependentValue.Elem().Kind() == reflect.Map) && dependentValue.Elem().IsNil() {
-		field.SetZero()
+		field.FieldValue.SetZero()
 	} else {
-		field.Set(dependentValue.Convert(field.Type()))
+		field.FieldValue.Set(dependentValue.Convert(field.FieldValue.Type()))
 	}
 	return nil
 }
@@ -260,7 +241,8 @@ func createPtrToInterfaceValue(nodeToWork ast.JsonNode, someOutType reflect.Type
 func newUnmarshallResolver(
 	node ast.JsonNode,
 	outType reflect.Type,
-	options *unmarshallOptions) (*unmarshallResolver, error) {
+	options *unmarshallOptions,
+	tagOption *util.JsonTagOptions) (*unmarshallResolver, error) {
 	var nodeToWork ast.JsonNode = node
 	someOutType := outType
 	numberOfPointer := 0
@@ -328,6 +310,7 @@ func newUnmarshallResolver(
 		outElementKind:       elementKind,
 		IsNil:                nodeToWork.GetNodeType() == ast.AST_NULL,
 		hasUnmarshaller:      hasUnmarshaller,
+		tagOption:            tagOption,
 	}
 	return base, nil
 }
@@ -356,7 +339,7 @@ func (resolver *unmarshallResolver) resolveByCustomizeObjectUnmarshal(node ast.J
 
 	unmarshalMethod := resolver.ptrToActualValue.MethodByName("UnmarshalJSON")
 
-	payload, err := InterpretAST(node, resolver.options.variables)
+	payload, err := InterpretAST(node, resolver.options.variables, resolver.options.marshaler)
 	if err != nil {
 		return err
 	}
@@ -391,7 +374,8 @@ func (resolver *unmarshallResolver) VisitArrayNode(node *ast.JsonArrayNode) erro
 
 // this is only visit from VisitObjectNode, it does not resolve any value, no need to check unmarshaler call
 func (resolver *unmarshallResolver) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) error {
-
+	// here the resolver.ptrToActualValue is a pointer to the object that holds this kv
+	// translate the key to the field name
 	key, err := resolver.processKVKeyNode(node.Key)
 	if err != nil {
 		return err
@@ -399,7 +383,17 @@ func (resolver *unmarshallResolver) VisitKeyValuePairNode(node *ast.JsonKeyValue
 
 	newResolver, err := resolver.processKVValueNode(key, node.Value)
 	if err != nil {
+		var notFind ErrorFieldNotExist
+		if errors.As(err, &notFind) {
+			// pass this field
+			return nil
+		}
 		return err
+	}
+
+	if newResolver == nil {
+		// it is dropped due to omitempty
+		return nil
 	}
 
 	resolver.options.resolverStack.Push(newResolver)
@@ -424,9 +418,9 @@ func (resolver *unmarshallResolver) VisitObjectNode(node *ast.JsonObjectNode) er
 func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) error {
 	if resolver.hasUnmarshaller {
 		if node.Value {
-			return resolver.resolveByCustomizePrimitiveUnmarshal(trueBytes)
+			return resolver.resolveByCustomizePrimitiveUnmarshal(token.TrueBytes)
 		} else {
-			return resolver.resolveByCustomizePrimitiveUnmarshal(falseBytes)
+			return resolver.resolveByCustomizePrimitiveUnmarshal(token.FalseBytes)
 		}
 	}
 	resolver.setValue(node.Value)
@@ -436,7 +430,7 @@ func (resolver *unmarshallResolver) VisitBooleanNode(node *ast.JsonBooleanNode) 
 func (resolver *unmarshallResolver) VisitNullNode(node *ast.JsonNullNode) error {
 	if resolver.hasUnmarshaller {
 		// fast unmarshal instead of using interpreter for primitive values
-		return resolver.resolveByCustomizePrimitiveUnmarshal(nullBytes)
+		return resolver.resolveByCustomizePrimitiveUnmarshal(token.NullBytes)
 	}
 	resolver.setValue(node.Value)
 	return resolver.resolve()
@@ -474,14 +468,55 @@ func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) er
 		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
 	}
 	valueToUnmarshal := util.RepairUTF8(string(node.GetValue()))
-	resolver.setValue(valueToUnmarshal)
+	if resolver.tagOption == nil || !resolver.tagOption.StringEncode {
+		resolver.setValue(valueToUnmarshal)
+		return resolver.resolve()
+	}
+
+	// this will only happen at AST string node when the tag is `string`
+	switch resolver.outElementKind {
+	case reflect.Bool:
+		if valueToUnmarshal == "true" {
+			resolver.setValue(true)
+		} else {
+			resolver.setValue(false)
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		intValue, err := strconv.ParseInt(valueToUnmarshal, 10, 64)
+		if err != nil {
+			return err
+		}
+		resolver.setValue(intValue)
+	case reflect.Float32, reflect.Float64:
+		floatValue, err := strconv.ParseFloat(valueToUnmarshal, 64)
+		if err != nil {
+			return err
+		}
+		resolver.setValue(floatValue)
+	case reflect.String:
+		var result string = string(node.Value)
+		decodedString, err := strconv.Unquote(result)
+		if err != nil {
+			return err
+		}
+		err = resolver.options.unmarshaler([]byte(decodedString), &result)
+		if err != nil {
+			return err
+		}
+
+		resolver.setValue(result)
+	case reflect.Interface:
+		resolver.setValue(valueToUnmarshal)
+	default:
+		return ErrorUnsupportedDataKind
+	}
+
 	return resolver.resolve()
 }
 
 func (resolver *unmarshallResolver) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
 	if resolver.hasUnmarshaller {
-		valueToUnmarshal := util.RepairUTF8(string(node.GetValue()))
-		return resolver.resolveByCustomizePrimitiveUnmarshal([]byte(valueToUnmarshal))
+		return resolver.resolveByCustomizePrimitiveUnmarshal([]byte(node.Value))
 	}
 	result, err := resolveStringVariable(node, resolver.options)
 	if err != nil {

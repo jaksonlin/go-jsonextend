@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "test with coverage",
+            "type": "shell",
+            "command": "go test ./... -coverpkg=github.com/jaksonlin/go-jsonextend/... -coverprofile=coverage.out && go tool cover -html=coverage.out -o coverage.html",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        }
+    ]
+}
+

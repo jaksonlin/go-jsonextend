@@ -2,29 +2,39 @@ package interpreter
 
 import (
 	"bytes"
-	"encoding/json"
+	"reflect"
 	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
+
+type BufferWriter interface {
+	Write(p []byte) (n int, err error)
+	WriteByte(c byte) error
+	WriteString(s string) (n int, err error)
+	Bytes() []byte
+}
 
 type standardVisitor struct {
 	sb          *bytes.Buffer
 	variables   map[string]interface{}
 	stackNode   *util.Stack[ast.JsonNode]
 	stackFormat *util.Stack[byte]
+	marshaler   ast.MarshalerFunc
 }
 
-var _ JsonVisitor = &standardVisitor{}
+var _ ast.NodeVisitor = &standardVisitor{}
 
-func NewInterpreter(variables map[string]interface{}) *standardVisitor {
+func NewASTInterpreter(variables map[string]interface{}, marshaler ast.MarshalerFunc) *standardVisitor {
 
 	return &standardVisitor{
 		sb:          bytes.NewBuffer(make([]byte, 0)),
 		variables:   variables,
 		stackNode:   util.NewStack[ast.JsonNode](),
 		stackFormat: util.NewStack[byte](),
+		marshaler:   marshaler,
 	}
 }
 
@@ -66,15 +76,15 @@ func (s *standardVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
 
 func (s *standardVisitor) VisitBooleanNode(node *ast.JsonBooleanNode) error {
 	if node.Value {
-		s.sb.Write(trueBytes)
+		s.sb.Write(token.TrueBytes)
 	} else {
-		s.sb.Write(falseBytes)
+		s.sb.Write(token.FalseBytes)
 	}
 	return s.WriteSymbol()
 }
 
 func (s *standardVisitor) VisitNullNode(node *ast.JsonNullNode) error {
-	s.sb.Write(nullBytes)
+	s.sb.Write(token.NullBytes)
 	return s.WriteSymbol()
 }
 
@@ -84,21 +94,38 @@ func (s *standardVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedStri
 	for varName, varDollarName := range node.Variables {
 		varVal, ok := s.variables[varName]
 		if ok {
-			content, err := json.Marshal(varVal)
+			content, err := s.marshalAndStripQuotes(varVal)
 			if err != nil {
-				return ErrorInterpretVariable
-			}
-			// remove the json string's leading and trailing double quotation mark, otherwise you will get something ""value"", which is invalid string
-			if content[0] == '"' {
-				content = content[1 : len(content)-1]
+				return err
 			}
 			result = bytes.ReplaceAll(result, varDollarName, content)
 		}
 	}
-	// the varaible value is of string type, remove the leading and trailing double quotation mark
 
 	s.sb.Write(result)
 	return s.WriteSymbol()
+}
+
+func (s *standardVisitor) marshalAndStripQuotes(varVal interface{}) ([]byte, error) {
+	var content []byte
+	if util.IsPrimitiveType(reflect.ValueOf(varVal)) {
+		c, err := util.EncodePrimitiveValue(varVal)
+		if err != nil {
+			return nil, err
+		}
+		content = c
+	} else {
+		c, err := s.marshaler(varVal)
+		if err != nil {
+			return nil, err
+		}
+		content = c
+	}
+
+	if content[0] == '"' {
+		content = content[1 : len(content)-1]
+	}
+	return content, nil
 }
 
 func (s *standardVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) error {
@@ -107,22 +134,22 @@ func (s *standardVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) 
 	if !ok {
 		s.sb.Write(node.Value)
 		return s.WriteSymbol()
-	} else {
-		content, err := json.Marshal(varVal)
-		if err != nil {
-			return ErrorInterpretVariable
-		}
-		if content[0] == '"' {
-			content = content[1 : len(content)-1]
-		}
-		s.sb.Write(content)
 	}
+	content, err := s.marshalAndStripQuotes(varVal)
+	if err != nil {
+		return ErrorInterpretVariable
+	}
+	s.sb.Write(content)
 
 	return s.WriteSymbol()
 }
 
 func (s *standardVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
 	s.sb.WriteByte('[')
+	if len(node.Value) == 0 {
+		s.stackFormat.Push(']')
+		return s.WriteSymbol()
+	}
 
 	for i := len(node.Value) - 1; i >= 0; i-- {
 		s.stackNode.Push(node.Value[i])
@@ -149,6 +176,10 @@ func (s *standardVisitor) GetOutput() []byte {
 
 func (s *standardVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	s.sb.WriteByte('{')
+	if len(node.Value) == 0 {
+		s.stackFormat.Push('}')
+		return s.WriteSymbol()
+	}
 	for i := len(node.Value) - 1; i >= 0; i-- {
 		s.stackNode.Push(node.Value[i])
 		if i == len(node.Value)-1 { // stack, first in last out
@@ -162,10 +193,10 @@ func (s *standardVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	return nil
 }
 
-func InterpretAST(node ast.JsonNode, variables map[string]interface{}) ([]byte, error) {
+func InterpretAST(node ast.JsonNode, variables map[string]interface{}, marshaler ast.MarshalerFunc) ([]byte, error) {
 	// deep first traverse the AST
 
-	visitor := NewInterpreter(variables)
+	visitor := NewASTInterpreter(variables, marshaler)
 	visitor.stackNode.Push(node)
 
 	for {

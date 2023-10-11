@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -10,48 +9,38 @@ import (
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
-type JsonVisitor interface {
-	VisitStringNode(node *ast.JsonStringNode) error
-	VisitNumberNode(node *ast.JsonNumberNode) error
-	VisitBooleanNode(node *ast.JsonBooleanNode) error
-	VisitNullNode(node *ast.JsonNullNode) error
-	VisitArrayNode(node *ast.JsonArrayNode) error
-	VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) error
-	VisitObjectNode(node *ast.JsonObjectNode) error
-	VisitVariableNode(node *ast.JsonExtendedVariableNode) error
-	VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error
-}
-
-type prettyPrintVisitor struct {
+type PrettyPrintVisitor struct {
 	sb           *bytes.Buffer
 	indentString string
 	indent       int
 	variables    map[string]interface{}
 	stackNode    *util.Stack[ast.JsonNode]
 	stackFormat  *util.Stack[byte]
+	marshaler    ast.MarshalerFunc
 }
 
-var _ JsonVisitor = &prettyPrintVisitor{}
+var _ ast.NodeVisitor = &PrettyPrintVisitor{}
 
 var colonFormat = []byte{' ', ':', ' '}
 
-func NewPPInterpreter(variables map[string]interface{}) *prettyPrintVisitor {
+func NewPPInterpreter(variables map[string]interface{}, marshaler ast.MarshalerFunc) *PrettyPrintVisitor {
 
-	return &prettyPrintVisitor{
+	return &PrettyPrintVisitor{
 		sb:           bytes.NewBuffer(make([]byte, 0)),
 		indentString: strings.Repeat(" ", 4),
 		indent:       0,
 		variables:    variables,
 		stackNode:    util.NewStack[ast.JsonNode](),
 		stackFormat:  util.NewStack[byte](),
+		marshaler:    marshaler,
 	}
 }
 
-func (s *prettyPrintVisitor) getSymbolLength() int {
+func (s *PrettyPrintVisitor) getSymbolLength() int {
 	return s.stackFormat.Length()
 }
 
-func (s *prettyPrintVisitor) WriteSymbol() error {
+func (s *PrettyPrintVisitor) WriteSymbol() error {
 	symbol, e := s.stackFormat.Pop()
 	if e != nil {
 		return e
@@ -95,33 +84,37 @@ func (s *prettyPrintVisitor) WriteSymbol() error {
 	return nil
 }
 
-func (s *prettyPrintVisitor) VisitStringNode(node *ast.JsonStringNode) error {
+func (s *PrettyPrintVisitor) VisitStringNode(node *ast.JsonStringNode) error {
 	s.sb.Write(node.Value)
 	return s.WriteSymbol()
 }
 
-func (s *prettyPrintVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
+func (s *PrettyPrintVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
 	s.sb.WriteString(strconv.FormatFloat(node.Value, 'f', -1, 64))
 	return s.WriteSymbol()
 }
 
-func (s *prettyPrintVisitor) VisitBooleanNode(node *ast.JsonBooleanNode) error {
+func (s *PrettyPrintVisitor) VisitBooleanNode(node *ast.JsonBooleanNode) error {
 	s.sb.WriteString(strconv.FormatBool(node.Value))
 	return s.WriteSymbol()
 }
 
-func (s *prettyPrintVisitor) VisitNullNode(node *ast.JsonNullNode) error {
+func (s *PrettyPrintVisitor) VisitNullNode(node *ast.JsonNullNode) error {
 	s.sb.WriteString("null")
 	return s.WriteSymbol()
 }
 
-func (s *prettyPrintVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
+func (s *PrettyPrintVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
+	if s.marshaler == nil {
+		s.sb.Write(node.Value)
+		return s.WriteSymbol()
+	}
 	var result []byte = make([]byte, len(node.Value))
 	copy(result, node.Value)
 	for varName, varDollarName := range node.Variables {
 		varVal, ok := s.variables[varName]
 		if ok {
-			content, err := json.Marshal(varVal)
+			content, err := s.marshaler(varVal)
 			if err != nil {
 				return ErrorInterpretVariable
 			}
@@ -138,14 +131,17 @@ func (s *prettyPrintVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedS
 	return s.WriteSymbol()
 }
 
-func (s *prettyPrintVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) error {
-
+func (s *PrettyPrintVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) error {
+	if s.marshaler == nil {
+		s.sb.Write(node.Value)
+		return s.WriteSymbol()
+	}
 	varVal, ok := s.variables[node.Variable] // allow partial rendered
 	if !ok {
 		s.sb.Write(node.Value)
 		return s.WriteSymbol()
 	} else {
-		content, err := json.Marshal(varVal)
+		content, err := Marshal(varVal)
 		if err != nil {
 			return ErrorInterpretVariable
 		}
@@ -158,10 +154,14 @@ func (s *prettyPrintVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNod
 	return s.WriteSymbol()
 }
 
-func (s *prettyPrintVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
+func (s *PrettyPrintVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
 	s.sb.WriteString("[\n")
 	s.indent++
 	s.sb.WriteString(strings.Repeat(s.indentString, s.indent))
+	if len(node.Value) == 0 {
+		s.stackFormat.Push(']')
+		return s.WriteSymbol()
+	}
 	for i := len(node.Value) - 1; i >= 0; i-- {
 		s.stackNode.Push(node.Value[i])
 		if i == len(node.Value)-1 {
@@ -173,7 +173,7 @@ func (s *prettyPrintVisitor) VisitArrayNode(node *ast.JsonArrayNode) error {
 	return nil
 }
 
-func (s *prettyPrintVisitor) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) error {
+func (s *PrettyPrintVisitor) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNode) error {
 	// stack, first in last out, value go first ;-)
 	s.stackNode.Push(node.Value)
 	s.stackNode.Push(node.Key)
@@ -181,14 +181,18 @@ func (s *prettyPrintVisitor) VisitKeyValuePairNode(node *ast.JsonKeyValuePairNod
 	return nil
 }
 
-func (s *prettyPrintVisitor) GetOutput() []byte {
+func (s *PrettyPrintVisitor) GetOutput() []byte {
 	return s.sb.Bytes()
 }
 
-func (s *prettyPrintVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
+func (s *PrettyPrintVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	s.sb.WriteString("{\n")
 	s.indent++
 	s.sb.WriteString(strings.Repeat(s.indentString, s.indent))
+	if len(node.Value) == 0 {
+		s.stackFormat.Push('}')
+		return s.WriteSymbol()
+	}
 	for i := len(node.Value) - 1; i >= 0; i-- {
 		s.stackNode.Push(node.Value[i])
 		if i == len(node.Value)-1 { // stack, first in last out
@@ -202,10 +206,10 @@ func (s *prettyPrintVisitor) VisitObjectNode(node *ast.JsonObjectNode) error {
 	return nil
 }
 
-func PrettyInterpret(node ast.JsonNode, variables map[string]interface{}) ([]byte, error) {
+func PrettyInterpret(node ast.JsonNode, variables map[string]interface{}, marshaler ast.MarshalerFunc) ([]byte, error) {
 	// deep first traverse the AST
 
-	visitor := NewPPInterpreter(variables)
+	visitor := NewPPInterpreter(variables, marshaler)
 	visitor.stackNode.Push(node)
 
 	for {
