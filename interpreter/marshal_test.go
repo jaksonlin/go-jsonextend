@@ -215,3 +215,177 @@ func TestOmitEmptyOptionMarshal(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestStringOptionMarshalWithInterface(t *testing.T) {
+
+	type Example struct {
+		F1 interface{} `json:",string"`
+		F2 interface{} `json:",string"`
+		F3 interface{} `json:",string"`
+		F4 interface{} `json:","`
+		F5 interface{} `json:",string"`
+	}
+
+	ex := Example{"hello", 123, true, []byte("hello"), []byte("hello")}
+	var checker Example
+	data2, err := json.Marshal(ex)
+	if err != nil {
+		t.FailNow()
+	}
+
+	data, err := testMarshaler(ex)
+	if err != nil {
+		t.FailNow()
+	}
+
+	if !bytes.Equal(data, data2) {
+		t.FailNow()
+	}
+
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = interpreter.UnmarshallAST(node, nil, testMarshaler, testUnmarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+	if myReceiver.F3 != checker.F3 {
+		t.FailNow()
+	}
+}
+
+func TestStringOptionMarshalWithPointer(t *testing.T) {
+
+	type Example struct {
+		F1 *string      `json:",string"`
+		F2 *int         `json:",string"`
+		F3 *bool        `json:",string"`
+		F4 *[]byte      `json:",string"`
+		F5 *interface{} `json:",string"`
+		F6 *[3]string   `json:",string"`
+	}
+
+	f1 := "hello"
+	f2 := 123
+	f3 := true
+	f4 := []byte("hello")
+	f5 := interface{}(nil)
+	f6 := [3]string{}
+	ex := Example{&f1, &f2, &f3, &f4, &f5, &f6}
+	var checker Example
+	data2, err := json.Marshal(ex)
+	if err != nil {
+		t.FailNow()
+	}
+	data, err := testMarshaler(ex)
+	if err != nil {
+		t.FailNow()
+	}
+
+	if !bytes.Equal(data, data2) {
+		t.FailNow()
+	}
+
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = interpreter.UnmarshallAST(node, nil, testMarshaler, testUnmarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+	if myReceiver.F3 != checker.F3 {
+		t.FailNow()
+	}
+}
+
+func TestStringOptionMarshalWithInterfacePointer(t *testing.T) {
+
+	type Example struct {
+		F1 *interface{} `json:",string"`
+		F2 *interface{} `json:",string"`
+		F3 *interface{} `json:",string"`
+		F4 *interface{} `json:",string"`
+		F5 *interface{} `json:",string"`
+		F6 *interface{} `json:",string"`
+	}
+
+	var f1 interface{} = "hello"
+	var f2 interface{} = 123
+	var f3 interface{} = true
+	var f4 interface{} = []byte("hello")
+	var f5 interface{} = interface{}(nil)
+	var f6 interface{} = [3]string{}
+	var ex interface{} = Example{&f1, &f2, &f3, &f4, &f5, &f6}
+	var checker Example
+	data2, err := json.Marshal(ex)
+	if err != nil {
+		t.FailNow()
+	}
+	data, err := testMarshaler(ex)
+	if err != nil {
+		t.FailNow()
+	}
+
+	if !bytes.Equal(data, data2) {
+		t.FailNow()
+	}
+
+	err = json.Unmarshal(data, &checker)
+	if err != nil {
+		t.FailNow()
+	}
+
+	sm := tokenizer.NewTokenizerStateMachineFromIOReader(bytes.NewReader(data))
+	err = sm.ProcessData()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	node := sm.GetASTBuilder().GetAST()
+	var myReceiver Example
+	err = interpreter.UnmarshallAST(node, nil, testMarshaler, testUnmarshaler, &myReceiver)
+	if err != nil {
+		t.FailNow()
+	}
+	if myReceiver.F1 != checker.F1 {
+		t.FailNow()
+	}
+	if myReceiver.F2 != checker.F2 {
+		t.FailNow()
+	}
+	if myReceiver.F3 != checker.F3 {
+		t.FailNow()
+	}
+}

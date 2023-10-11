@@ -339,6 +339,8 @@ func EncodePrimitiveValue(v interface{}) ([]byte, error) {
 		return token.FalseBytes, nil
 	case nil:
 		return token.NullBytes, nil
+	case interface{}:
+		return EncodePrimitiveValue(data)
 	default:
 		return nil, ErrorUnsupportedDataKind
 	}

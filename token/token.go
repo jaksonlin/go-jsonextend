@@ -46,40 +46,74 @@ func IsSymbolToken(t TokenType) bool {
 	return t == TOKEN_COMMA || t == TOKEN_COLON || t == TOKEN_LEFT_BRACE || t == TOKEN_LEFT_BRACKET || t == TOKEN_RIGHT_BRACE || t == TOKEN_RIGHT_BRACKET
 }
 
-func GetTokenTypeByReflection(v *reflect.Value) TokenType {
-	rv := *v
+type ValueState struct {
+	HasPointer   bool
+	HasInterface bool
+	Field        reflect.Value
+	TokenType    TokenType
+}
+
+// stop evil pointer and interface
+func removePointersAndInterfaces(state *ValueState) {
+	rv := state.Field
 	if !rv.IsValid() {
-		return TOKEN_NULL
+		state.TokenType = TOKEN_NULL
+		return
 	}
-	for rv.Kind() == reflect.Pointer {
+	// incase interface hoding pointer
+	if rv.Kind() == reflect.Interface {
+		state.HasInterface = true
 		if rv.IsNil() {
-			return TOKEN_NULL
+			state.TokenType = TOKEN_NULL
+			return
 		}
 		rv = rv.Elem()
+		state.Field = rv
 	}
-	switch rv.Kind() {
+	// removes all the pointers
+	for rv.Kind() == reflect.Pointer {
+		state.HasPointer = true
+		if rv.IsNil() {
+			state.TokenType = TOKEN_NULL
+			return
+		}
+		rv = rv.Elem()
+		state.Field = rv
+	}
+	// incase it is interface at last
+	if rv.Kind() == reflect.Interface {
+		if rv.IsNil() {
+			state.TokenType = TOKEN_NULL
+			return
+		} else {
+			elem := rv.Elem()
+			state.Field = elem
+			removePointersAndInterfaces(state)
+		}
+	}
+}
+
+func GetValueState(v reflect.Value) *ValueState {
+	rs := &ValueState{Field: v}
+	removePointersAndInterfaces(rs)
+
+	switch rs.Field.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 		reflect.Float32, reflect.Float64:
-		return TOKEN_NUMBER
+		rs.TokenType = TOKEN_NUMBER
 	case reflect.String:
-		return TOKEN_STRING
+		rs.TokenType = TOKEN_STRING
 	case reflect.Bool:
-		return TOKEN_BOOLEAN
+		rs.TokenType = TOKEN_BOOLEAN
 	case reflect.Slice, reflect.Array:
-		return TOKEN_LEFT_BRACKET
+		rs.TokenType = TOKEN_LEFT_BRACKET
 	case reflect.Struct, reflect.Map:
-		return TOKEN_LEFT_BRACE
-	case reflect.Interface:
-		if rv.IsNil() {
-			return TOKEN_NULL
-		} else {
-			elem := rv.Elem()
-			return GetTokenTypeByReflection(&elem)
-		}
+		rs.TokenType = TOKEN_LEFT_BRACE
 	default:
-		return TOKEN_UNKNOWN
+		rs.TokenType = TOKEN_UNKNOWN
 	}
+	return rs
 }
 
 var (

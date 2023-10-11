@@ -505,6 +505,8 @@ func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) er
 		}
 
 		resolver.setValue(result)
+	case reflect.Interface:
+		resolver.setValue(valueToUnmarshal)
 	default:
 		return ErrorUnsupportedDataKind
 	}
@@ -514,8 +516,7 @@ func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) er
 
 func (resolver *unmarshallResolver) VisitStringWithVariableNode(node *ast.JsonExtendedStringWIthVariableNode) error {
 	if resolver.hasUnmarshaller {
-		valueToUnmarshal := util.RepairUTF8(string(node.GetValue()))
-		return resolver.resolveByCustomizePrimitiveUnmarshal([]byte(valueToUnmarshal))
+		return resolver.resolveByCustomizePrimitiveUnmarshal([]byte(node.Value))
 	}
 	result, err := resolveStringVariable(node, resolver.options)
 	if err != nil {

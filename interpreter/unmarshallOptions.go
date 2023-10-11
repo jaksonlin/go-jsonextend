@@ -19,7 +19,7 @@ type unmarshallOptions struct {
 
 func NewUnMarshallOptions(variables map[string]interface{}, marshaler ast.MarshalerFunc, unmarshaler ast.UnmarshalerFunc) *unmarshallOptions {
 	options := &unmarshallOptions{
-		ensureInt:     true,
+		ensureInt:     false,
 		variables:     variables,
 		resolverStack: util.NewStack[*unmarshallResolver](),
 		marshaler:     marshaler,

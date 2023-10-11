@@ -4,7 +4,6 @@ import (
 	"html"
 	"reflect"
 	"strconv"
-	"unicode/utf8"
 )
 
 // string to number receiver
@@ -51,22 +50,6 @@ func getMemoryAddress(v reflect.Value) uintptr {
 	default:
 		return v.UnsafeAddr()
 	}
-}
-
-// repair string as json standard request
-func repairUTF8(s string) string {
-	if utf8.ValidString(s) {
-		return s // Already valid UTF-8.
-	}
-
-	var repaired []rune
-	for len(s) > 0 {
-		r, size := utf8.DecodeRuneInString(s)
-		repaired = append(repaired, r)
-		s = s[size:]
-	}
-
-	return string(repaired)
 }
 
 func htmlEscape(s string) string {

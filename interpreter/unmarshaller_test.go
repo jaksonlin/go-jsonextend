@@ -14,8 +14,17 @@ import (
 	"github.com/jaksonlin/go-jsonextend/tokenizer"
 )
 
-var testMarshaler = func(v interface{}) ([]byte, error) { return interpreter.Marshal(v) }
-var testUnmarshaler = func(data []byte, v interface{}) error { return interpreter.Unmarshal(bytes.NewReader(data), nil, v) }
+// these will be used as cross over validation check.
+var myMarshaler = func(v interface{}) ([]byte, error) { return interpreter.Marshal(v) }
+var myUnMarshaler = func(data []byte, v interface{}) error {
+	return interpreter.Unmarshal(bytes.NewReader(data), nil, v)
+}
+var jsonMarshaler = func(v interface{}) ([]byte, error) { return json.Marshal(v) }
+var jsonUnMarshaler = func(data []byte, v interface{}) error {
+	return json.Unmarshal(data, v)
+}
+var testMarshaler = myMarshaler
+var testUnmarshaler = myUnMarshaler
 
 func TestAssignThingsPrimitives(t *testing.T) {
 	type test1 struct {

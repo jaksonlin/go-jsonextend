@@ -31,7 +31,7 @@ func newRootTokenProvider(out interface{}) (*tokenProvider, error) {
 	s := util.NewStack[*workingItem]()
 	v := reflect.ValueOf(out)
 
-	theTokenType := token.GetTokenTypeByReflection(&v)
+	theTokenType := token.GetTokenTypeByReflection(v)
 	if theTokenType == token.TOKEN_UNKNOWN {
 		return nil, ErrorUnknownData
 	}
@@ -54,7 +54,7 @@ func canNilKind(k reflect.Kind) bool {
 
 func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, tagOptions *util.JsonTagOptions) (*workingItem, error) {
 
-	theTokenType := token.GetTokenTypeByReflection(&v)
+	theTokenType := token.GetTokenTypeByReflection(v)
 	if theTokenType == token.TOKEN_UNKNOWN {
 		return nil, ErrorUnknownData
 	}
@@ -72,13 +72,24 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 	if canNilKind(kind) && v.IsNil() {
 		sb.WriteString("@nil->")
 		path := append(parent.path, sb.String())
-		return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path, tagOptions: tagOptions}, nil
+		return &workingItem{
+			reflectValue: v,
+			tokenType:    theTokenType,
+			address:      addr,
+			path:         path,
+			tagOptions:   tagOptions,
+		}, nil
 	}
 
 	if !addrable {
 		sb.WriteString(":unaddressable")
 		path := append(parent.path, sb.String())
-		return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path}, nil
+		return &workingItem{
+			reflectValue: v,
+			tokenType:    theTokenType,
+			address:      addr,
+			path:         path,
+		}, nil
 	}
 
 	if kind == reflect.Slice {
@@ -98,7 +109,33 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 	sb.WriteString("->")
 
 	path := append(parent.path, sb.String())
-	return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path}, nil
+	return &workingItem{
+		reflectValue: v,
+		tokenType:    theTokenType,
+		address:      addr,
+		path:         path,
+	}, nil
+
+}
+
+func newWorkingItemForPrimitiveValue(v reflect.Value, tagOptions *util.JsonTagOptions) (*workingItem, error) {
+	isInterface := isInterfaceValue(v)
+	theTokenType := token.GetTokenTypeByReflection(v)
+	if theTokenType == token.TOKEN_UNKNOWN {
+		return nil, ErrorUnknownData
+	}
+	// for primitive value, we need to check if we need to encode it into string
+	if tagOptions != nil && tagOptions.StringEncode {
+		if theTokenType != token.TOKEN_NULL {
+			theTokenType = token.TOKEN_STRING
+		}
+	}
+
+	return &workingItem{
+		reflectValue: v,
+		tagOptions:   tagOptions,
+		tokenType:    theTokenType,
+	}, nil
 
 }
 func (t *tokenProvider) detectCyclicAccess(item *workingItem) error {
@@ -137,8 +174,11 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 	for item.reflectValue.Kind() == reflect.Pointer {
 		item.reflectValue = item.reflectValue.Elem()
 	}
-	if item.reflectValue.Kind() == reflect.Interface && !item.reflectValue.IsNil() {
-		item.reflectValue = item.reflectValue.Elem()
+	if item.reflectValue.Kind() == reflect.Interface {
+
+		if !item.reflectValue.IsNil() {
+			item.reflectValue = item.reflectValue.Elem()
+		}
 	}
 	switch item.tokenType {
 	case token.TOKEN_LEFT_BRACKET:
@@ -184,7 +224,7 @@ func (t *tokenProvider) processArrayItem(item *workingItem) error {
 	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACKET})
 	for i := len - 1; i >= 0; i -= 1 {
 		element := item.reflectValue.Index(i)
-		theTokenType := token.GetTokenTypeByReflection(&element)
+		theTokenType := token.GetTokenTypeByReflection(element)
 		if theTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
@@ -201,7 +241,7 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 	allFields := util.FlattenJsonStructForMarshal(workItem.reflectValue)
 	for i := 0; i < len(allFields); i += 1 {
 		val := allFields[i]
-		valueTokenType := token.GetTokenTypeByReflection(&val.FieldValue)
+		valueTokenType := token.GetTokenTypeByReflection(val.FieldValue)
 		if valueTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
@@ -214,16 +254,11 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 			}
 			t.workingStack.Push(newItem)
 		} else {
-			// when the primitive field require string encode, return the tokenType as string instead of the primitive type
-			if val.FieldJsonTag != nil && val.FieldJsonTag.StringEncode {
-				encodedValue, err := util.EncodePrimitiveValue(val.FieldValue.Interface())
-				if err != nil {
-					return err
-				}
-				t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(string(encodedValue)), tokenType: token.TOKEN_STRING})
-			} else {
-				t.workingStack.Push(&workingItem{reflectValue: val.FieldValue, tokenType: valueTokenType})
+			newItem, err := newWorkingItemForPrimitiveValue(val.FieldValue, val.FieldJsonTag)
+			if err != nil {
+				return err
 			}
+			t.workingStack.Push(newItem)
 		}
 		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(val.FieldName), tokenType: token.TOKEN_STRING})
 	}
@@ -233,12 +268,12 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 func (t *tokenProvider) processMapItem(item *workingItem) error {
 	for _, key := range item.reflectValue.MapKeys() {
 		mapValue := item.reflectValue.MapIndex(key)
-		valueTokenType := token.GetTokenTypeByReflection(&mapValue)
+		valueTokenType := token.GetTokenTypeByReflection(mapValue)
 		if valueTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
 		t.workingStack.Push(&workingItem{reflectValue: mapValue, tokenType: valueTokenType})
-		keyTokenType := token.GetTokenTypeByReflection(&key)
+		keyTokenType := token.GetTokenTypeByReflection(key)
 		if keyTokenType == token.TOKEN_NUMBER {
 			keyValue, err := convertNumericToString(key)
 			if err != nil {
@@ -295,9 +330,18 @@ func (t *tokenProvider) ReadString() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	val := item.reflectValue.String()
-	// use go standard
-	v := util.EncodeToJsonString(val)
+
+	// in this case the item.reflectValue is not string value.
+	if item.tagOptions != nil && item.tagOptions.StringEncode {
+
+		val, err := util.EncodePrimitiveValue(item.reflectValue.Interface())
+		if err != nil {
+			return nil, err
+		}
+		v := util.EncodeToJsonString(string(val))
+		return v, nil
+	}
+	v := util.EncodeToJsonString(item.reflectValue.String())
 	return v, nil
 }
 
