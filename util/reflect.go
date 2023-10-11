@@ -163,7 +163,7 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 				if ok {
 					// no json tag field name but have option
 					tagConfig := GetFieldNameAndOptions(jsonTag)
-					flattenFields[field.Name].FieldJsonTag = tagConfig
+					result.FieldJsonTag = tagConfig
 				}
 				flattenFields[field.Name] = result
 			}

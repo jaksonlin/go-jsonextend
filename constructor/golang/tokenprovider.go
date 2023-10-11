@@ -17,6 +17,7 @@ type workingItem struct {
 	tokenType    token.TokenType
 	path         []string
 	address      uintptr
+	tagOptions   *util.JsonTagOptions
 }
 
 type tokenProvider struct {
@@ -37,7 +38,7 @@ func newRootTokenProvider(out interface{}) (*tokenProvider, error) {
 	if v.CanAddr() {
 		addr = getMemoryAddress(v)
 	}
-	s.Push(&workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: []string{v.Kind().String()}})
+	s.Push(&workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: []string{v.Kind().String()}, tagOptions: nil})
 
 	return &tokenProvider{
 		rootOut:      v,
@@ -50,7 +51,7 @@ func canNilKind(k reflect.Kind) bool {
 	return k == reflect.Interface || k == reflect.Ptr || k == reflect.Map || k == reflect.Slice
 }
 
-func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem) (*workingItem, error) {
+func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, tagOptions *util.JsonTagOptions) (*workingItem, error) {
 
 	theTokenType := token.GetTokenTypeByReflection(&v)
 	if theTokenType == token.TOKEN_UNKNOWN {
@@ -70,7 +71,7 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem) (
 	if canNilKind(kind) && v.IsNil() {
 		sb.WriteString("@nil->")
 		path := append(parent.path, sb.String())
-		return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path}, nil
+		return &workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: path, tagOptions: tagOptions}, nil
 	}
 
 	if !addrable {
@@ -177,7 +178,7 @@ func (t *tokenProvider) processArrayItem(item *workingItem) error {
 		if theTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
-		newItem, err := newContainerWorkingItem(fmt.Sprintf("%d", i), element, item)
+		newItem, err := newContainerWorkingItem(fmt.Sprintf("%d", i), element, item, nil)
 		if err != nil {
 			return err
 		}
@@ -197,13 +198,22 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 
 		if valueTokenType == token.TOKEN_LEFT_BRACE || valueTokenType == token.TOKEN_LEFT_BRACKET {
 			// for none primitive type, we need to track the path
-			newItem, err := newContainerWorkingItem(val.FieldName, val.FieldValue, workItem)
+			newItem, err := newContainerWorkingItem(val.FieldName, val.FieldValue, workItem, val.FieldJsonTag)
 			if err != nil {
 				return err
 			}
 			t.workingStack.Push(newItem)
 		} else {
-			t.workingStack.Push(&workingItem{reflectValue: val.FieldValue, tokenType: valueTokenType})
+			// when the field require string encode, return the tokenType as string instead of the primitive type
+			if val.FieldJsonTag != nil && val.FieldJsonTag.StringEncode {
+				encodedValue, err := util.EncodePrimitiveValue(val.FieldValue.Interface())
+				if err != nil {
+					return err
+				}
+				t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(string(encodedValue)), tokenType: token.TOKEN_STRING})
+			} else {
+				t.workingStack.Push(&workingItem{reflectValue: val.FieldValue, tokenType: valueTokenType})
+			}
 		}
 		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(val.FieldName), tokenType: token.TOKEN_STRING})
 	}

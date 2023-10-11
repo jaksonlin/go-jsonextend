@@ -54,7 +54,7 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 		}
 		kvValueElementType = fieldInfo.FieldValue.Type()
 		tagOption = fieldInfo.FieldJsonTag
-		if tagOption.Omitempty && valueNode.ShouldOmitEmpty() {
+		if tagOption != nil && tagOption.Omitempty && valueNode.ShouldOmitEmpty() {
 			return nil, nil
 		}
 	} else {
