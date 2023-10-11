@@ -319,13 +319,22 @@ func TestStringOptionMarshalWithPointer(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	if myReceiver.F1 != checker.F1 {
+	if *myReceiver.F1 != *checker.F1 {
 		t.FailNow()
 	}
-	if myReceiver.F2 != checker.F2 {
+	if *myReceiver.F2 != *checker.F2 {
 		t.FailNow()
 	}
-	if myReceiver.F3 != checker.F3 {
+	if *myReceiver.F3 != *checker.F3 {
+		t.FailNow()
+	}
+	if !bytes.Equal(*myReceiver.F4, *checker.F4) {
+		t.FailNow()
+	}
+	if myReceiver.F5 != checker.F5 && myReceiver.F5 != nil && checker.F5 != nil {
+		t.FailNow()
+	}
+	if *myReceiver.F6 != *checker.F6 {
 		t.FailNow()
 	}
 }
@@ -379,13 +388,22 @@ func TestStringOptionMarshalWithInterfacePointer(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	if myReceiver.F1 != checker.F1 {
+	if *myReceiver.F1 != *checker.F1 {
 		t.FailNow()
 	}
-	if myReceiver.F2 != checker.F2 {
+	if *myReceiver.F2 != *checker.F2 {
 		t.FailNow()
 	}
-	if myReceiver.F3 != checker.F3 {
+	if *myReceiver.F3 != *checker.F3 {
+		t.FailNow()
+	}
+	if (*myReceiver.F4).(string) != (*checker.F4).(string) {
+		t.FailNow()
+	}
+	if myReceiver.F5 != checker.F5 && myReceiver.F5 != nil && checker.F5 != nil {
+		t.FailNow()
+	}
+	if len((*myReceiver.F6).([3]string)) != len((*checker.F6).([3]string)) {
 		t.FailNow()
 	}
 }

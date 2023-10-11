@@ -46,75 +46,120 @@ func IsSymbolToken(t TokenType) bool {
 	return t == TOKEN_COMMA || t == TOKEN_COLON || t == TOKEN_LEFT_BRACE || t == TOKEN_LEFT_BRACKET || t == TOKEN_RIGHT_BRACE || t == TOKEN_RIGHT_BRACKET
 }
 
-type ValueState struct {
-	HasPointer   bool
-	HasInterface bool
-	Field        reflect.Value
-	TokenType    TokenType
-}
-
 // stop evil pointer and interface
-func removePointersAndInterfaces(state *ValueState) {
-	rv := state.Field
+func removePointersAndInterfaces(v reflect.Value, hasInterface *bool) (reflect.Value, bool) {
+	rv := v
 	if !rv.IsValid() {
-		state.TokenType = TOKEN_NULL
-		return
+		return rv, true
 	}
 	// incase interface hoding pointer
 	if rv.Kind() == reflect.Interface {
-		state.HasInterface = true
-		if rv.IsNil() {
-			state.TokenType = TOKEN_NULL
-			return
+		if !(*hasInterface) {
+			*hasInterface = true
 		}
+		if rv.IsNil() {
+			return rv, true
+		}
+
 		rv = rv.Elem()
-		state.Field = rv
+
 	}
 	// removes all the pointers
 	for rv.Kind() == reflect.Pointer {
-		state.HasPointer = true
 		if rv.IsNil() {
-			state.TokenType = TOKEN_NULL
-			return
+			return rv, true
 		}
 		rv = rv.Elem()
-		state.Field = rv
 	}
 	// incase it is interface at last
 	if rv.Kind() == reflect.Interface {
+		if !(*hasInterface) {
+			*hasInterface = true
+		}
 		if rv.IsNil() {
-			state.TokenType = TOKEN_NULL
-			return
+			return rv, true
 		} else {
 			elem := rv.Elem()
-			state.Field = elem
-			removePointersAndInterfaces(state)
+			return removePointersAndInterfaces(elem, hasInterface)
 		}
 	}
+	return rv, false
 }
 
-func GetValueState(v reflect.Value) *ValueState {
-	rs := &ValueState{Field: v}
-	removePointersAndInterfaces(rs)
+// about interface{}, when doing marshaling, we won't care how many pointers or interfaces a value is wrapped,
+// all we need to do is to get the actual value, and then we can return the token type.
+// when unmarshaling, there's 2 situation about interface{},
+// 1. when a field is interface{}, we just put what ever value into it;
+// 2. a field is *interface{}, then we just need to put the value into the interface, and restore the level of pointers.(which we have already do)
+// otherthings is about whether a field is captured by interface{} or not, if it does, the json string tag option won't work.
+// this is typically not easy to detect when the interface is wrapped deep by pointer, therefore we return this indicator from this function.
+// as for howmany level of a pointer is wrapped
+// we will not return the value from here, if we does, we will bypass the cyclic access check. (e.g. when a pointer points to itself, if we do return the value from here
+// we will not be able to detect the cyclic access)
 
-	switch rs.Field.Kind() {
+// get the acutal token type underneath the reflect.Value, and return the indicator whether the value is wrapped by interface{}
+func GetTokenTypeByReflection(v reflect.Value) (TokenType, bool) {
+
+	hasInterface := false
+	val, isNil := removePointersAndInterfaces(v, &hasInterface)
+
+	if isNil {
+		return TOKEN_NULL, hasInterface
+	}
+
+	switch val.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 		reflect.Float32, reflect.Float64:
-		rs.TokenType = TOKEN_NUMBER
+		return TOKEN_NUMBER, hasInterface
 	case reflect.String:
-		rs.TokenType = TOKEN_STRING
+		return TOKEN_STRING, hasInterface
 	case reflect.Bool:
-		rs.TokenType = TOKEN_BOOLEAN
+		return TOKEN_BOOLEAN, hasInterface
 	case reflect.Slice, reflect.Array:
-		rs.TokenType = TOKEN_LEFT_BRACKET
+		return TOKEN_LEFT_BRACKET, hasInterface
 	case reflect.Struct, reflect.Map:
-		rs.TokenType = TOKEN_LEFT_BRACE
+		return TOKEN_LEFT_BRACE, hasInterface
 	default:
-		rs.TokenType = TOKEN_UNKNOWN
+		return TOKEN_UNKNOWN, hasInterface
 	}
-	return rs
 }
+
+// func GetTokenTypeByReflection(v reflect.Value) TokenType {
+// 	rv := v
+// 	if !rv.IsValid() {
+// 		return TOKEN_NULL
+// 	}
+// 	for rv.Kind() == reflect.Pointer {
+// 		if rv.IsNil() {
+// 			return TOKEN_NULL
+// 		}
+// 		rv = rv.Elem()
+// 	}
+// 	switch rv.Kind() {
+// 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+// 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+// 		reflect.Float32, reflect.Float64:
+// 		return TOKEN_NUMBER
+// 	case reflect.String:
+// 		return TOKEN_STRING
+// 	case reflect.Bool:
+// 		return TOKEN_BOOLEAN
+// 	case reflect.Slice, reflect.Array:
+// 		return TOKEN_LEFT_BRACKET
+// 	case reflect.Struct, reflect.Map:
+// 		return TOKEN_LEFT_BRACE
+// 	case reflect.Interface:
+// 		if rv.IsNil() {
+// 			return TOKEN_NULL
+// 		} else {
+// 			elem := rv.Elem()
+// 			return GetTokenTypeByReflection(elem)
+// 		}
+// 	default:
+// 		return TOKEN_UNKNOWN
+// 	}
+// }
 
 var (
 	NullBytes  []byte = []byte("null")

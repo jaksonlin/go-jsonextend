@@ -19,6 +19,7 @@ type workingItem struct {
 	path         []string
 	address      uintptr
 	tagOptions   *util.JsonTagOptions
+	hasInterface bool // whether the value is wrapped by interface{}, if yes the json string tag option should not apply
 }
 
 type tokenProvider struct {
@@ -31,15 +32,15 @@ func newRootTokenProvider(out interface{}) (*tokenProvider, error) {
 	s := util.NewStack[*workingItem]()
 	v := reflect.ValueOf(out)
 
-	theTokenType := token.GetTokenTypeByReflection(v)
-	if theTokenType == token.TOKEN_UNKNOWN {
+	tokenType, hasInterface := token.GetTokenTypeByReflection(v)
+	if tokenType == token.TOKEN_UNKNOWN {
 		return nil, ErrorUnknownData
 	}
 	var addr uintptr
 	if v.CanAddr() {
 		addr = getMemoryAddress(v)
 	}
-	s.Push(&workingItem{reflectValue: v, tokenType: theTokenType, address: addr, path: []string{v.Kind().String()}, tagOptions: nil})
+	s.Push(&workingItem{reflectValue: v, tokenType: tokenType, address: addr, path: []string{v.Kind().String()}, tagOptions: nil, hasInterface: hasInterface})
 
 	return &tokenProvider{
 		rootOut:      v,
@@ -54,8 +55,8 @@ func canNilKind(k reflect.Kind) bool {
 
 func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, tagOptions *util.JsonTagOptions) (*workingItem, error) {
 
-	theTokenType := token.GetTokenTypeByReflection(v)
-	if theTokenType == token.TOKEN_UNKNOWN {
+	tokenType, hasInterface := token.GetTokenTypeByReflection(v)
+	if tokenType == token.TOKEN_UNKNOWN {
 		return nil, ErrorUnknownData
 	}
 	var addr uintptr = 0
@@ -74,10 +75,11 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 		path := append(parent.path, sb.String())
 		return &workingItem{
 			reflectValue: v,
-			tokenType:    theTokenType,
+			tokenType:    tokenType,
 			address:      addr,
 			path:         path,
 			tagOptions:   tagOptions,
+			hasInterface: hasInterface,
 		}, nil
 	}
 
@@ -86,9 +88,10 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 		path := append(parent.path, sb.String())
 		return &workingItem{
 			reflectValue: v,
-			tokenType:    theTokenType,
+			tokenType:    tokenType,
 			address:      addr,
 			path:         path,
+			hasInterface: hasInterface,
 		}, nil
 	}
 
@@ -111,30 +114,32 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 	path := append(parent.path, sb.String())
 	return &workingItem{
 		reflectValue: v,
-		tokenType:    theTokenType,
+		tokenType:    tokenType,
 		address:      addr,
 		path:         path,
+		hasInterface: hasInterface,
 	}, nil
 
 }
 
 func newWorkingItemForPrimitiveValue(v reflect.Value, tagOptions *util.JsonTagOptions) (*workingItem, error) {
-	isInterface := isInterfaceValue(v)
-	theTokenType := token.GetTokenTypeByReflection(v)
-	if theTokenType == token.TOKEN_UNKNOWN {
+
+	tokenType, hasInterface := token.GetTokenTypeByReflection(v)
+	if tokenType == token.TOKEN_UNKNOWN {
 		return nil, ErrorUnknownData
 	}
 	// for primitive value, we need to check if we need to encode it into string
-	if tagOptions != nil && tagOptions.StringEncode {
-		if theTokenType != token.TOKEN_NULL {
-			theTokenType = token.TOKEN_STRING
+	if !hasInterface && tagOptions != nil && tagOptions.StringEncode {
+		if tokenType != token.TOKEN_NULL {
+			tokenType = token.TOKEN_STRING
 		}
 	}
 
 	return &workingItem{
 		reflectValue: v,
 		tagOptions:   tagOptions,
-		tokenType:    theTokenType,
+		tokenType:    tokenType,
+		hasInterface: hasInterface,
 	}, nil
 
 }
@@ -224,7 +229,7 @@ func (t *tokenProvider) processArrayItem(item *workingItem) error {
 	t.workingStack.Push(&workingItem{tokenType: token.TOKEN_RIGHT_BRACKET})
 	for i := len - 1; i >= 0; i -= 1 {
 		element := item.reflectValue.Index(i)
-		theTokenType := token.GetTokenTypeByReflection(element)
+		theTokenType, _ := token.GetTokenTypeByReflection(element)
 		if theTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
@@ -241,7 +246,7 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 	allFields := util.FlattenJsonStructForMarshal(workItem.reflectValue)
 	for i := 0; i < len(allFields); i += 1 {
 		val := allFields[i]
-		valueTokenType := token.GetTokenTypeByReflection(val.FieldValue)
+		valueTokenType, _ := token.GetTokenTypeByReflection(val.FieldValue)
 		if valueTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
@@ -268,12 +273,12 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 func (t *tokenProvider) processMapItem(item *workingItem) error {
 	for _, key := range item.reflectValue.MapKeys() {
 		mapValue := item.reflectValue.MapIndex(key)
-		valueTokenType := token.GetTokenTypeByReflection(mapValue)
+		valueTokenType, _ := token.GetTokenTypeByReflection(mapValue)
 		if valueTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
 		t.workingStack.Push(&workingItem{reflectValue: mapValue, tokenType: valueTokenType})
-		keyTokenType := token.GetTokenTypeByReflection(key)
+		keyTokenType, _ := token.GetTokenTypeByReflection(key)
 		if keyTokenType == token.TOKEN_NUMBER {
 			keyValue, err := convertNumericToString(key)
 			if err != nil {
@@ -332,7 +337,7 @@ func (t *tokenProvider) ReadString() ([]byte, error) {
 	}
 
 	// in this case the item.reflectValue is not string value.
-	if item.tagOptions != nil && item.tagOptions.StringEncode {
+	if !item.hasInterface && item.tagOptions != nil && item.tagOptions.StringEncode {
 
 		val, err := util.EncodePrimitiveValue(item.reflectValue.Interface())
 		if err != nil {
