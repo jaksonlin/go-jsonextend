@@ -6,10 +6,9 @@ type nodePlugins struct {
 }
 
 func (plugin *nodePlugins) PreVisitPlugin(visitor JsonVisitor, node JsonNode) error {
-	if node.IsVisited() {
+	if len(plugin.preVisitPlugins) == 0 {
 		return nil
 	}
-
 	for _, p := range plugin.preVisitPlugins {
 		if err := p.PreVisitPlugin(visitor, node); err != nil {
 			return err
@@ -19,7 +18,9 @@ func (plugin *nodePlugins) PreVisitPlugin(visitor JsonVisitor, node JsonNode) er
 }
 
 func (plugin *nodePlugins) PostVisitPlugin(visitor JsonVisitor, node JsonNode) error {
-
+	if len(plugin.postVisitPlugins) == 0 {
+		return nil
+	}
 	for _, p := range plugin.postVisitPlugins {
 		if err := p.PostVisitPlugin(visitor, node); err != nil {
 			return err
