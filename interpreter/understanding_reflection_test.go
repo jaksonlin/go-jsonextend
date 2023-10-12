@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/jaksonlin/go-jsonextend/interpreter"
 )
 
 type SomeInterfaceV2 interface {
@@ -647,4 +649,38 @@ func TestCyclic(t *testing.T) {
 		t.FailNow()
 	}
 	fmt.Println("data: ", string(data))
+}
+
+func TestBytesConvert(t *testing.T) {
+	type mystruct struct {
+		Field []byte `json:",string"`
+	}
+	var m mystruct
+	m.Field = []byte("123")
+	data, err := json.Marshal(m)
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println("data: ", string(data))
+	data2, err := interpreter.Marshal(m)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println("data2: ", string(data2))
+	type Address struct {
+	}
+
+	type Person struct {
+		Name    string         `json:"name"`
+		Address map[string]int `json:"address,omitempty"`
+	}
+
+	p := Person{
+		Name:    "John",
+		Address: make(map[string]int),
+	}
+	data, _ = json.Marshal(p.Address)
+	fmt.Println(string(data)) // {"name":"John"}
+
 }

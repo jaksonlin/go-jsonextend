@@ -8,7 +8,7 @@ import (
 type TokenProvider interface {
 	ReadBool() (bool, error)
 	ReadNull() error
-	ReadNumber() (float64, error)
+	ReadNumber() (interface{}, error)
 	ReadString() ([]byte, error)
 	ReadVariable() ([]byte, error)
 	GetNextTokenType() (token.TokenType, error)

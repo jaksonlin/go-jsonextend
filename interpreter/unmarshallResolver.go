@@ -30,6 +30,7 @@ type unmarshallResolver struct {
 	fields               map[string]*util.JSONStructField
 	hasUnmarshaller      bool
 	tagOption            *util.JsonTagOptions
+	extendOption         *util.JsonExtendOptions
 }
 
 func (resolver *unmarshallResolver) collectAllFields() error {
@@ -242,7 +243,8 @@ func newUnmarshallResolver(
 	node ast.JsonNode,
 	outType reflect.Type,
 	options *unmarshallOptions,
-	tagOption *util.JsonTagOptions) (*unmarshallResolver, error) {
+	tagOption *util.JsonTagOptions,
+	extendOption *util.JsonExtendOptions) (*unmarshallResolver, error) {
 	var nodeToWork ast.JsonNode = node
 	someOutType := outType
 	numberOfPointer := 0
@@ -311,6 +313,7 @@ func newUnmarshallResolver(
 		IsNil:                nodeToWork.GetNodeType() == ast.AST_NULL,
 		hasUnmarshaller:      hasUnmarshaller,
 		tagOption:            tagOption,
+		extendOption:         extendOption,
 	}
 	return base, nil
 }
@@ -467,7 +470,11 @@ func (resolver *unmarshallResolver) VisitStringNode(node *ast.JsonStringNode) er
 	if resolver.hasUnmarshaller {
 		return resolver.resolveByCustomizePrimitiveUnmarshal(node.Value)
 	}
-	valueToUnmarshal := util.RepairUTF8(string(node.GetValue()))
+	valueToUnmarshal, err := node.GetValue()
+	if err != nil {
+		return err
+	}
+	valueToUnmarshal = util.RepairUTF8(valueToUnmarshal)
 	if resolver.tagOption == nil || !resolver.tagOption.StringEncode {
 		resolver.setValue(valueToUnmarshal)
 		return resolver.resolve()

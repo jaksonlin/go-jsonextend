@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/jaksonlin/go-jsonextend/token"
@@ -46,6 +47,7 @@ type JSONStructField struct {
 	FieldName    string
 	FieldValue   reflect.Value
 	FieldJsonTag *JsonTagOptions
+	ExtendTag    *JsonExtendOptions
 }
 
 func (j *JSONStructField) ShouldDropFieldIfSetValue(valueToUnmarshal reflect.Value) bool {
@@ -64,6 +66,11 @@ type JsonTagOptions struct {
 	fieldName    string // will not be used outside, cause the correct field name will be set in the `fieldName` of `JSONStructField`
 }
 
+type JsonExtendOptions struct {
+	FieldVariableKeyName   string
+	FieldVariableValueName string
+}
+
 func GetFieldNameAndOptions(jsonTag string) *JsonTagOptions {
 	if jsonTag == "-" {
 		return nil
@@ -80,6 +87,35 @@ func GetFieldNameAndOptions(jsonTag string) *JsonTagOptions {
 		}
 	}
 	return ret
+}
+
+var extendTagPattern = regexp.MustCompile(`\W(\w+=\w+)`)
+
+func getExtensionTags(field reflect.StructField) *JsonExtendOptions {
+
+	tag, ok := field.Tag.Lookup("jsonext")
+	if !ok {
+		return nil
+	}
+	matches := extendTagPattern.FindAllStringSubmatch(tag, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	ret := &JsonExtendOptions{}
+	for _, match := range matches {
+		kv := strings.Split(match[1], "=")
+		if len(kv) != 2 {
+			continue
+		}
+		if kv[0] == "k" {
+			ret.FieldVariableKeyName = kv[1]
+		} else if kv[0] == "v" {
+			ret.FieldVariableValueName = kv[1]
+		}
+
+	}
+	return ret
+
 }
 
 // this is for Unmarshal, the main differences relies on the fact that when unmarshalling, we cannot use workItem's value
@@ -127,6 +163,7 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 				continue
 			}
 			tagConfig := GetFieldNameAndOptions(jsonTag)
+			extendTag := getExtensionTags(field)
 			fieldValue := item.Field(i)
 
 			// 4. check same level key collision
@@ -139,6 +176,7 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 						FieldName:    tagConfig.fieldName,
 						FieldValue:   fieldValue,
 						FieldJsonTag: tagConfig,
+						ExtendTag:    extendTag,
 					}
 				}
 			} else {
@@ -165,6 +203,8 @@ func FlattenJsonStructForUnmarshal(workItem reflect.Value) map[string]*JSONStruc
 					tagConfig := GetFieldNameAndOptions(jsonTag)
 					result.FieldJsonTag = tagConfig
 				}
+				extendTag := getExtensionTags(field)
+				result.ExtendTag = extendTag
 				flattenFields[field.Name] = result
 			}
 		}
@@ -254,6 +294,7 @@ func FlattenJsonStructForMarshal(workItem reflect.Value) []*JSONStructField {
 			}
 			// 2.3 check for omitempty
 			tagConfig := GetFieldNameAndOptions(jsonTag)
+			extendTag := getExtensionTags(field)
 			fieldValue := item.Field(i)
 			if shouldDropField(fieldValue, tagConfig) {
 				continue
@@ -269,6 +310,7 @@ func FlattenJsonStructForMarshal(workItem reflect.Value) []*JSONStructField {
 						FieldName:    tagConfig.fieldName,
 						FieldValue:   fieldValue,
 						FieldJsonTag: tagConfig,
+						ExtendTag:    extendTag,
 					})
 				}
 			} else {
@@ -300,6 +342,8 @@ func FlattenJsonStructForMarshal(workItem reflect.Value) []*JSONStructField {
 					}
 					result.FieldJsonTag = tagConfig
 				}
+				extendTag := getExtensionTags(field)
+				result.ExtendTag = extendTag
 				flattenFields = append(flattenFields, result)
 			}
 		}

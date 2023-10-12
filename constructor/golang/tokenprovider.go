@@ -14,12 +14,13 @@ import (
 const maxDepth = 1000
 
 type workingItem struct {
-	reflectValue reflect.Value
-	tokenType    token.TokenType
-	path         []string
-	address      uintptr
-	tagOptions   *util.JsonTagOptions
-	hasInterface bool // whether the value is wrapped by interface{}, if yes the json string tag option should not apply
+	reflectValue  reflect.Value
+	tokenType     token.TokenType
+	path          []string
+	address       uintptr
+	tagOptions    *util.JsonTagOptions
+	extendOptions *util.JsonExtendOptions
+	hasInterface  bool // whether the value is wrapped by interface{}, if yes the json string tag option should not apply
 }
 
 type tokenProvider struct {
@@ -122,7 +123,7 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 
 }
 
-func newWorkingItemForPrimitiveValue(v reflect.Value, tagOptions *util.JsonTagOptions) (*workingItem, error) {
+func newWorkingItemForPrimitiveValue(v reflect.Value, tagOptions *util.JsonTagOptions, extendOptions *util.JsonExtendOptions) (*workingItem, error) {
 
 	tokenType, hasInterface := token.GetTokenTypeByReflection(v)
 	if tokenType == token.TOKEN_UNKNOWN {
@@ -136,10 +137,11 @@ func newWorkingItemForPrimitiveValue(v reflect.Value, tagOptions *util.JsonTagOp
 	}
 
 	return &workingItem{
-		reflectValue: v,
-		tagOptions:   tagOptions,
-		tokenType:    tokenType,
-		hasInterface: hasInterface,
+		reflectValue:  v,
+		tagOptions:    tagOptions,
+		tokenType:     tokenType,
+		hasInterface:  hasInterface,
+		extendOptions: extendOptions,
 	}, nil
 
 }
@@ -259,7 +261,7 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 			}
 			t.workingStack.Push(newItem)
 		} else {
-			newItem, err := newWorkingItemForPrimitiveValue(val.FieldValue, val.FieldJsonTag)
+			newItem, err := newWorkingItemForPrimitiveValue(val.FieldValue, val.FieldJsonTag, val.ExtendTag)
 			if err != nil {
 				return err
 			}
@@ -350,7 +352,7 @@ func (t *tokenProvider) ReadString() ([]byte, error) {
 	return v, nil
 }
 
-func (t *tokenProvider) ReadNumber() (float64, error) {
+func (t *tokenProvider) ReadNumber() (interface{}, error) {
 	item, err := t.workingStack.Pop()
 	if err != nil {
 		return 0.0, err

@@ -153,7 +153,19 @@ func TestOmit(t *testing.T) {
 		InterfaceField interface{}       `json:"interfaceField,omitempty"`
 	}
 
-	d := Data{}
+	d := Data{
+		StringField: "",
+		IntField:    0,
+		BoolField:   false,
+		SliceField:  nil,
+		MapField:    nil,
+		PointerField: func() *string {
+			var s string
+			return &s
+		}(),
+		StructField:    AnotherData{},
+		InterfaceField: nil,
+	}
 	result, err := interpreter.Marshal(d)
 	if err != nil {
 		t.FailNow()

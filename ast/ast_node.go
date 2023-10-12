@@ -3,49 +3,10 @@ package ast
 import (
 	"encoding/base64"
 	"fmt"
+	"strconv"
 
-	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
-
-type AST_NODETYPE byte
-
-func (a AST_NODETYPE) Byte() byte {
-	return byte(a)
-}
-
-const (
-	AST_NODE_TYPE_BOUNDARY AST_NODETYPE = 200
-	AST_ARRAY              AST_NODETYPE = 201
-	AST_OBJECT             AST_NODETYPE = 202
-	AST_KVPAIR             AST_NODETYPE = 203
-	AST_VARIABLE           AST_NODETYPE = 204
-	AST_STRING_VARIABLE    AST_NODETYPE = 205
-	AST_STRING             AST_NODETYPE = 206
-	AST_NUMBER             AST_NODETYPE = 207
-	AST_BOOLEAN            AST_NODETYPE = 208
-	AST_NULL               AST_NODETYPE = 209
-	AST_NODE_UNDEFINED     AST_NODETYPE = 210
-)
-
-func ConvertTokenTypeToNodeType(t token.TokenType) AST_NODETYPE {
-	switch t {
-	case token.TOKEN_BOOLEAN:
-		return AST_NUMBER
-	case token.TOKEN_STRING:
-		return AST_STRING
-	case token.TOKEN_NUMBER:
-		return AST_NUMBER
-	case token.TOKEN_NULL:
-		return AST_NULL
-	case token.TOKEN_VARIABLE:
-		return AST_VARIABLE
-	case token.TOKEN_STRING_WITH_VARIABLE:
-		return AST_STRING_VARIABLE
-	default:
-		return AST_NODE_UNDEFINED
-	}
-}
 
 func NodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 
@@ -72,7 +33,8 @@ func NodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 		}, nil
 	case AST_NUMBER:
 		return &JsonNumberNode{
-			Value: value.(float64),
+			OriginValue: value,
+			Value:       value.(float64),
 		}, nil
 	case AST_BOOLEAN:
 		return &JsonBooleanNode{
@@ -101,37 +63,46 @@ func NodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 	}
 }
 
-type JsonVisitor interface {
-	VisitStringNode(node *JsonStringNode) error
-	VisitNumberNode(node *JsonNumberNode) error
-	VisitBooleanNode(node *JsonBooleanNode) error
-	VisitNullNode(node *JsonNullNode) error
-	VisitArrayNode(node *JsonArrayNode) error
-	VisitKeyValuePairNode(node *JsonKeyValuePairNode) error
-	VisitObjectNode(node *JsonObjectNode) error
-	VisitVariableNode(node *JsonExtendedVariableNode) error
-	VisitStringWithVariableNode(node *JsonExtendedStringWIthVariableNode) error
+type astNodeBase struct {
+	visited     bool
+	nodePlugins nodePlugins
+	meta        map[string]interface{}
 }
 
-type JsonNode interface {
-	GetNodeType() AST_NODETYPE
-	Visit(visitor JsonVisitor) error
-	String() string
-	ShouldOmitEmpty() bool
+func (node *astNodeBase) SetMeta(key string, value interface{}) {
+	if node.meta == nil {
+		node.meta = make(map[string]interface{})
+	}
+	node.meta[key] = value
 }
 
-type JsonCollectionNode interface {
-	JsonNode
-	Length() int
+func (node *astNodeBase) GetMeta(key string) interface{} {
+	if node.meta == nil {
+		return nil
+	}
+	val, ok := node.meta[key]
+	if !ok {
+		return nil
+	}
+	return val
 }
 
-type JsonStringValueNode interface {
-	JsonNode
-	GetValue() string
+func (node *astNodeBase) SetVisited() {
+	node.visited = true
+}
+
+func (node *astNodeBase) IsVisited() bool {
+	return node.visited
+}
+
+func (node *astNodeBase) UnsetVisited() {
+	node.visited = false
 }
 
 type JsonStringNode struct {
-	Value []byte
+	astNodeBase
+	Value       []byte
+	stringValue string
 }
 
 var _ JsonNode = &JsonStringNode{}
@@ -141,28 +112,45 @@ func (node *JsonStringNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonStringNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitStringNode(node)
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitStringNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonStringNode) String() string {
 	return fmt.Sprintf("string node, value: %s\n", node.Value)
 }
 
-func (node *JsonStringNode) ShouldOmitEmpty() bool {
-	return len(node.Value) == 2
-}
-
-func (node *JsonStringNode) GetValue() string {
-	if len(node.Value) == 2 {
-		return "" // empty string with 2 double quotation marks only
-	} else {
-		return string(node.Value[1 : len(node.Value)-1])
+func (node *JsonStringNode) GetValue() (string, error) {
+	if node.stringValue != "" {
+		return node.stringValue, nil
 	}
+	val, err := strconv.Unquote(string(node.Value))
+	if err != nil {
+		return "", err
+	}
+	node.stringValue = val
+	return val, nil
 }
 
 func (node *JsonStringNode) ToArrayNode() (*JsonArrayNode, error) {
-
-	data, err := base64.StdEncoding.DecodeString(node.GetValue())
+	bytesData, err := node.GetValue()
+	if err != nil {
+		return nil, err
+	}
+	data, err := base64.StdEncoding.DecodeString(bytesData)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +168,9 @@ func (node *JsonStringNode) ToArrayNode() (*JsonArrayNode, error) {
 }
 
 type JsonNumberNode struct {
-	Value float64
+	astNodeBase
+	OriginValue interface{}
+	Value       float64
 }
 
 var _ JsonNode = &JsonNumberNode{}
@@ -190,18 +180,29 @@ func (node *JsonNumberNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonNumberNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitNumberNode(node)
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitNumberNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonNumberNode) String() string {
 	return fmt.Sprintf("number node, value: %f\n", node.Value)
 }
 
-func (node *JsonNumberNode) ShouldOmitEmpty() bool {
-	return node.Value == 0
-}
-
 type JsonBooleanNode struct {
+	astNodeBase
 	Value bool
 }
 
@@ -212,18 +213,29 @@ func (node *JsonBooleanNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonBooleanNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitBooleanNode(node)
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitBooleanNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonBooleanNode) String() string {
 	return fmt.Sprintf("boolean node, value: %t\n", node.Value)
 }
 
-func (node *JsonBooleanNode) ShouldOmitEmpty() bool {
-	return !node.Value
-}
-
 type JsonNullNode struct {
+	astNodeBase
 	Value interface{}
 }
 
@@ -234,18 +246,29 @@ func (node *JsonNullNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonNullNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitNullNode(node)
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitNullNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonNullNode) String() string {
 	return fmt.Sprintf("null node, value: %v\n", node.Value)
 }
 
-func (node *JsonNullNode) ShouldOmitEmpty() bool {
-	return true
-}
-
 type JsonArrayNode struct {
+	astNodeBase
 	Value []JsonNode
 }
 
@@ -256,7 +279,23 @@ func (node *JsonArrayNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonArrayNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitArrayNode(node)
+	// allow user to shutdown the visit of the node
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	// it is possible that the plugin set the node as visited, so we need to check again
+	if !node.IsVisited() {
+		err = visitor.VisitArrayNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonArrayNode) Append(n JsonNode) {
@@ -271,11 +310,8 @@ func (node *JsonArrayNode) String() string {
 	return fmt.Sprintf("array node, length: %d\n", len(node.Value))
 }
 
-func (node *JsonArrayNode) ShouldOmitEmpty() bool {
-	return len(node.Value) == 0
-}
-
 type JsonKeyValuePairNode struct {
+	astNodeBase
 	Key   JsonStringValueNode
 	Value JsonNode
 }
@@ -286,8 +322,29 @@ func (node *JsonKeyValuePairNode) GetNodeType() AST_NODETYPE {
 	return AST_KVPAIR
 }
 
+func (node *JsonKeyValuePairNode) UnsetVisited() {
+	node.visited = false
+	node.Key.UnsetVisited()
+	node.Value.UnsetVisited()
+}
+
 func (node *JsonKeyValuePairNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitKeyValuePairNode(node)
+	// allow user to shutdown the visit of the node
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitKeyValuePairNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonKeyValuePairNode) IsFilled() bool {
@@ -298,11 +355,8 @@ func (node *JsonKeyValuePairNode) String() string {
 	return fmt.Sprintf("key value pair node, key: [%s], value: [%s]\n", node.Key.String(), node.Value.String())
 }
 
-func (node *JsonKeyValuePairNode) ShouldOmitEmpty() bool {
-	return node.Value == nil || node.Value.ShouldOmitEmpty()
-}
-
 type JsonObjectNode struct {
+	astNodeBase
 	Value []*JsonKeyValuePairNode
 }
 
@@ -313,7 +367,23 @@ func (node *JsonObjectNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonObjectNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitObjectNode(node)
+	// allow user to shutdown the visit of the node
+	if node.IsVisited() {
+		return nil
+	}
+
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitObjectNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonObjectNode) Append(kvNode *JsonKeyValuePairNode) {
@@ -328,11 +398,8 @@ func (node *JsonObjectNode) String() string {
 	return fmt.Sprintf("object node, length: %d\n", len(node.Value))
 }
 
-func (node *JsonObjectNode) ShouldOmitEmpty() bool {
-	return false // struct should not omit empty
-}
-
 type JsonExtendedVariableNode struct {
+	astNodeBase
 	Value    []byte
 	Variable string
 }
@@ -344,7 +411,21 @@ func (node *JsonExtendedVariableNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonExtendedVariableNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitVariableNode(node)
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitVariableNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonExtendedVariableNode) extractVariable() {
@@ -354,13 +435,6 @@ func (node *JsonExtendedVariableNode) extractVariable() {
 
 func (node *JsonExtendedVariableNode) String() string {
 	return fmt.Sprintf("variable node, value: %s\n", node.Value)
-}
-
-func (node *JsonExtendedVariableNode) ShouldOmitEmpty() bool {
-	// this really depends on what content user put in the variable
-	// for primitive types, we can do omity empty, for slice, object the same as well
-	// as a TODO
-	return false
 }
 
 type JsonExtendedStringWIthVariableNode struct {
@@ -375,7 +449,21 @@ func (node *JsonExtendedStringWIthVariableNode) GetNodeType() AST_NODETYPE {
 }
 
 func (node *JsonExtendedStringWIthVariableNode) Visit(visitor JsonVisitor) error {
-	return visitor.VisitStringWithVariableNode(node)
+	if node.IsVisited() {
+		return nil
+	}
+	err := node.nodePlugins.PreVisitPlugin(visitor, node)
+	if err != nil {
+		return err
+	}
+	if !node.IsVisited() {
+		err = visitor.VisitStringWithVariableNode(node)
+		if err != nil {
+			return err
+		}
+		node.SetVisited()
+	}
+	return node.nodePlugins.PostVisitPlugin(visitor, node)
 }
 
 func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
@@ -388,17 +476,10 @@ func (node *JsonExtendedStringWIthVariableNode) extractVariables() {
 	}
 }
 
-func (node *JsonExtendedStringWIthVariableNode) GetValue() string {
+func (node *JsonExtendedStringWIthVariableNode) GetValue() (string, error) {
 	return node.JsonStringNode.GetValue()
 }
 
 func (node *JsonExtendedStringWIthVariableNode) String() string {
 	return fmt.Sprintf("string with variable node, value: %s\n", node.Value)
-}
-
-func (node *JsonExtendedStringWIthVariableNode) ShouldOmitEmpty() bool {
-	// this really depends on what content user put in the variable
-	// for primitive types, we can do omity empty, for slice, object the same as well
-	// as a TODO
-	return false
 }

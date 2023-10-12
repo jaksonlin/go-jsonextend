@@ -12,7 +12,10 @@ import (
 )
 
 func (resolver *unmarshallResolver) processKVKeyNode(node ast.JsonStringValueNode) (string, error) {
-	var key string = node.GetValue()
+	key, err := node.GetValue()
+	if err != nil {
+		return "", err
+	}
 	if node.GetNodeType() == ast.AST_STRING_VARIABLE {
 		resultBytes, err := resolveStringVariable(node.(*ast.JsonExtendedStringWIthVariableNode), resolver.options)
 		if err != nil {
@@ -42,6 +45,7 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 
 	var kvValueElementType reflect.Type = nil
 	var tagOption *util.JsonTagOptions
+	var extendOption *util.JsonExtendOptions
 	if kvParentElementType.Kind() == reflect.Map {
 		// when parent is a map, the child element type is the map's value type
 		kvValueElementType = kvParentElementType.Elem()
@@ -54,15 +58,13 @@ func (resolver *unmarshallResolver) processKVValueNode(key string, valueNode ast
 		}
 		kvValueElementType = fieldInfo.FieldValue.Type()
 		tagOption = fieldInfo.FieldJsonTag
-		if tagOption != nil && tagOption.Omitempty && valueNode.ShouldOmitEmpty() {
-			return nil, nil
-		}
+		extendOption = fieldInfo.ExtendTag
 	} else {
 		return nil, NewErrorInternalExpectingStructButFindOthers(kvParentElementType.Kind().String())
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver, err := newUnmarshallResolver(valueNode, kvValueElementType, resolver.options, tagOption)
+	newResolver, err := newUnmarshallResolver(valueNode, kvValueElementType, resolver.options, tagOption, extendOption)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +88,7 @@ func (resolver *unmarshallResolver) createArrayElementResolver(index int, node a
 	}
 
 	// 2. create the collection's reflection value representative
-	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options, nil)
+	newResolver, err := newUnmarshallResolver(node, childElementType, resolver.options, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +127,7 @@ func UnmarshallAST(node ast.JsonNode, variables map[string]interface{}, marshale
 
 	options := NewUnMarshallOptions(variables, marshaler, unmarshaler)
 	traverseStack := options.resolverStack
-	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options, nil)
+	resolver, err := newUnmarshallResolver(node, valueItem.Type(), options, nil, nil)
 	if err != nil {
 		return err
 	}

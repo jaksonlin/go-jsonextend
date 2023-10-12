@@ -93,7 +93,7 @@ func (t *tokenProvider) ReadNull() error {
 
 }
 
-func (t *tokenProvider) ReadNumber() (float64, error) {
+func (t *tokenProvider) ReadNumber() (interface{}, error) {
 	lengthOfNumber := 1
 	for {
 		nextByte, err := t.dataSource.Peek(lengthOfNumber)

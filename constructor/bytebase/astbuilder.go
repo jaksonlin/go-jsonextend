@@ -47,7 +47,7 @@ func (t *ASTByteBaseBuilder) ReadNull() error {
 	return t.provider.ReadNull()
 }
 
-func (t *ASTByteBaseBuilder) ReadNumber() (float64, error) {
+func (t *ASTByteBaseBuilder) ReadNumber() (interface{}, error) {
 	return t.provider.ReadNumber()
 }
 

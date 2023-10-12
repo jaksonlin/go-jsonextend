@@ -49,7 +49,7 @@ func (t *ASTGolangBaseBuilder) ReadNull() error {
 	return t.provider.ReadNull()
 }
 
-func (t *ASTGolangBaseBuilder) ReadNumber() (float64, error) {
+func (t *ASTGolangBaseBuilder) ReadNumber() (interface{}, error) {
 	return t.provider.ReadNumber()
 }
 
