@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
@@ -207,7 +207,7 @@ func (t *tokenProvider) detectCyclicAccess(item *workingItem) error {
 	return nil
 }
 
-var _ constructor.TokenProvider = &tokenProvider{}
+var _ astbuilder.TokenProvider = &tokenProvider{}
 
 func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 

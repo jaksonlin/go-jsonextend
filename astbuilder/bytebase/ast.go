@@ -2,7 +2,7 @@ package bytebase
 
 import (
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	astbuilder "github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -11,8 +11,8 @@ type astByteBaseConstructor struct {
 	syntaxChecker *syntaxChecker
 }
 
-var _ constructor.ASTStateManagement = &astByteBaseConstructor{}
-var _ constructor.NodeConstructor = &astByteBaseConstructor{}
+var _ astbuilder.ASTStateManagement = &astByteBaseConstructor{}
+var _ astbuilder.NodeConstructor = &astByteBaseConstructor{}
 
 func newASTConstructor() *astByteBaseConstructor {
 	return &astByteBaseConstructor{

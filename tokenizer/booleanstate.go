@@ -1,6 +1,6 @@
 package tokenizer
 
-import "github.com/jaksonlin/go-jsonextend/constructor"
+import "github.com/jaksonlin/go-jsonextend/astbuilder"
 
 type BooleanState struct {
 	PrimitiveValueTokenStateBase
@@ -12,7 +12,7 @@ func (i *BooleanState) GetMode() StateMode {
 	return BOOLEAN_MODE
 }
 
-func (i *BooleanState) ProcessData(provider constructor.TokenProvider) error {
+func (i *BooleanState) ProcessData(provider astbuilder.TokenProvider) error {
 	// in boolean state we will consume until it is the end of boolean.
 	value, err := provider.ReadBool()
 	if err != nil {

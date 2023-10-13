@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/jaksonlin/go-jsonextend"
-	"github.com/jaksonlin/go-jsonextend/constructor/golang"
+	"github.com/jaksonlin/go-jsonextend/astbuilder/golang"
 )
 
 func TestMarshalObj(t *testing.T) {

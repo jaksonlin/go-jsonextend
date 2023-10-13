@@ -1,4 +1,4 @@
-package constructor
+package astbuilder
 
 import (
 	"github.com/jaksonlin/go-jsonextend/ast"

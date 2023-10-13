@@ -2,7 +2,7 @@ package golang
 
 import (
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -11,7 +11,7 @@ type ASTGolangBaseBuilder struct {
 	provider       *tokenProvider
 }
 
-func NewASTGolangBaseBuilder(obj interface{}) (constructor.ASTBuilder, error) {
+func NewASTGolangBaseBuilder(obj interface{}) (astbuilder.ASTBuilder, error) {
 	provider, err := newRootTokenProvider(obj)
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func NewASTGolangBaseBuilder(obj interface{}) (constructor.ASTBuilder, error) {
 	}, nil
 }
 
-var _ constructor.ASTBuilder = &ASTGolangBaseBuilder{}
+var _ astbuilder.ASTBuilder = &ASTGolangBaseBuilder{}
 
 // put the store to syntax symbol here, to decouple the relation of reader and writer
 func (t *ASTGolangBaseBuilder) GetNextTokenType() (token.TokenType, error) {

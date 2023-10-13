@@ -1,7 +1,7 @@
 package tokenizer
 
 import (
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 )
 
 type NumberState struct {
@@ -14,7 +14,7 @@ func (i *NumberState) GetMode() StateMode {
 	return NUMBER_MODE
 }
 
-func (i *NumberState) ProcessData(provider constructor.TokenProvider) error {
+func (i *NumberState) ProcessData(provider astbuilder.TokenProvider) error {
 	f64, err := provider.ReadNumber()
 	if err != nil {
 		return err

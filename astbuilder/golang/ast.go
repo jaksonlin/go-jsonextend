@@ -2,7 +2,7 @@ package golang
 
 import (
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -10,8 +10,8 @@ type astGolangConstructor struct {
 	ast *ast.JsonextAST
 }
 
-var _ constructor.ASTStateManagement = (*astGolangConstructor)(nil)
-var _ constructor.NodeConstructor = (*astGolangConstructor)(nil)
+var _ astbuilder.ASTStateManagement = (*astGolangConstructor)(nil)
+var _ astbuilder.NodeConstructor = (*astGolangConstructor)(nil)
 
 func newASTConstructor() *astGolangConstructor {
 	return &astGolangConstructor{
