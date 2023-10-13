@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"reflect"
 
@@ -174,7 +173,7 @@ const maxDepth = 100
 
 func unmarshal(reader io.Reader, variables map[string]interface{}, out interface{}, depth int) error {
 	if depth > maxDepth {
-		return errors.New("recursion depth exceeded")
+		return ErrorSelfCallTooDeep
 	}
 	sm := tokenizer.NewTokenizerStateMachineFromIOReader(reader)
 	err := sm.ProcessData()
@@ -182,7 +181,7 @@ func unmarshal(reader io.Reader, variables map[string]interface{}, out interface
 		return err
 	}
 	if sm.GetASTBuilder().HasOpenElements() {
-		return errors.New("invalid json")
+		return ErrorInvalidJson
 	}
 	ast := sm.GetAST()
 	return UnmarshallAST(ast, variables, Marshal, func(v []byte, out interface{}) error {

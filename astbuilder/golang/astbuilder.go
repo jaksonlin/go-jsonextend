@@ -2,7 +2,7 @@ package golang
 
 import (
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -11,7 +11,7 @@ type ASTGolangBaseBuilder struct {
 	provider       *tokenProvider
 }
 
-func NewASTGolangBaseBuilder(obj interface{}) (constructor.ASTBuilder, error) {
+func NewASTGolangBaseBuilder(obj interface{}) (astbuilder.ASTBuilder, error) {
 	provider, err := newRootTokenProvider(obj)
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func NewASTGolangBaseBuilder(obj interface{}) (constructor.ASTBuilder, error) {
 	}, nil
 }
 
-var _ constructor.ASTBuilder = &ASTGolangBaseBuilder{}
+var _ astbuilder.ASTBuilder = &ASTGolangBaseBuilder{}
 
 // put the store to syntax symbol here, to decouple the relation of reader and writer
 func (t *ASTGolangBaseBuilder) GetNextTokenType() (token.TokenType, error) {
@@ -62,7 +62,18 @@ func (t *ASTGolangBaseBuilder) ReadVariable() ([]byte, error) {
 }
 
 func (t *ASTGolangBaseBuilder) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
-	return t.astConstructor.RecordStateValue(valueType, nodeValue)
+	node, err := t.astConstructor.CreateNodeWithValue(valueType, nodeValue)
+	if err != nil {
+		return err
+	}
+	// we do peek for tokenizer's ReadValue, now we pop it out and add any meta/plugin if needed
+	valueWorkItem, err := t.provider.workingStack.Pop()
+	if err != nil {
+		return err
+	}
+	valueWorkItem.SetMetaAndPlugins(node)
+	return nil
+
 }
 
 func (i *ASTGolangBaseBuilder) GetAST() ast.JsonNode {

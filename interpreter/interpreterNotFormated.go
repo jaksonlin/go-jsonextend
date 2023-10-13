@@ -70,7 +70,12 @@ func (s *standardVisitor) VisitStringNode(node *ast.JsonStringNode) error {
 }
 
 func (s *standardVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
-	s.sb.WriteString(strconv.FormatFloat(node.Value, 'f', -1, 64))
+	f64, err := util.ConvertInterfaceNumberToFloat64(node.Value)
+	if err != nil {
+		return err
+	}
+
+	s.sb.WriteString(strconv.FormatFloat(f64, 'f', -1, 64))
 	return s.WriteSymbol()
 }
 

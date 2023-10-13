@@ -6,7 +6,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
@@ -21,6 +22,45 @@ type workingItem struct {
 	tagOptions    *util.JsonTagOptions
 	extendOptions *util.JsonExtendOptions
 	hasInterface  bool // whether the value is wrapped by interface{}, if yes the json string tag option should not apply
+}
+
+// manage all the json tag options here using meta and plugin, instead of throwing them around the core logic
+func (w *workingItem) SetMetaAndPlugins(node ast.JsonNode) {
+	if w.reflectValue.Kind() == reflect.Map {
+		node.SetMeta(OBJECT_FROM_MAP_META, true)
+	}
+
+	if w.hasInterface {
+		node.SetMeta(INTERFACE_ITEM_META, w.hasInterface)
+	}
+
+	if w.reflectValue.Kind() == reflect.Slice && w.reflectValue.Type().Elem().Kind() == reflect.Uint8 {
+		if kvpair, ok := node.(*ast.JsonKeyValuePairNode); ok {
+			kvpair.Value.AddPlugin(sliceConversionPlugin)
+		} else {
+			node.AddPlugin(sliceConversionPlugin)
+		}
+	}
+
+	if w.tagOptions != nil {
+
+		if !w.hasInterface && w.tagOptions.StringEncode {
+			if w.tokenType != token.TOKEN_NULL {
+				if kvpair, ok := node.(*ast.JsonKeyValuePairNode); ok {
+					kvpair.Value.AddPlugin(stringOptPlugin)
+				} else {
+					node.AddPlugin(stringOptPlugin)
+				}
+			}
+		}
+
+		if w.tagOptions.Omitempty {
+			// for omitEmpty, we will plug on the kvpair node directly, this will remove the push of k and v node
+			node.PrependPlugin(omitEmptyPlugin)
+		}
+
+	}
+
 }
 
 type tokenProvider struct {
@@ -54,7 +94,7 @@ func canNilKind(k reflect.Kind) bool {
 	return k == reflect.Interface || k == reflect.Ptr || k == reflect.Map || k == reflect.Slice
 }
 
-func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, tagOptions *util.JsonTagOptions) (*workingItem, error) {
+func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, tagOptions *util.JsonTagOptions, extendOption *util.JsonExtendOptions) (*workingItem, error) {
 
 	tokenType, hasInterface := token.GetTokenTypeByReflection(v)
 	if tokenType == token.TOKEN_UNKNOWN {
@@ -75,12 +115,13 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 		sb.WriteString("@nil->")
 		path := append(parent.path, sb.String())
 		return &workingItem{
-			reflectValue: v,
-			tokenType:    tokenType,
-			address:      addr,
-			path:         path,
-			tagOptions:   tagOptions,
-			hasInterface: hasInterface,
+			reflectValue:  v,
+			tokenType:     tokenType,
+			address:       addr,
+			path:          path,
+			tagOptions:    tagOptions,
+			extendOptions: extendOption,
+			hasInterface:  hasInterface,
 		}, nil
 	}
 
@@ -88,11 +129,12 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 		sb.WriteString(":unaddressable")
 		path := append(parent.path, sb.String())
 		return &workingItem{
-			reflectValue: v,
-			tokenType:    tokenType,
-			address:      addr,
-			path:         path,
-			hasInterface: hasInterface,
+			reflectValue:  v,
+			tokenType:     tokenType,
+			address:       addr,
+			path:          path,
+			extendOptions: extendOption,
+			hasInterface:  hasInterface,
 		}, nil
 	}
 
@@ -114,11 +156,12 @@ func newContainerWorkingItem(key string, v reflect.Value, parent *workingItem, t
 
 	path := append(parent.path, sb.String())
 	return &workingItem{
-		reflectValue: v,
-		tokenType:    tokenType,
-		address:      addr,
-		path:         path,
-		hasInterface: hasInterface,
+		reflectValue:  v,
+		tokenType:     tokenType,
+		address:       addr,
+		path:          path,
+		extendOptions: extendOption,
+		hasInterface:  hasInterface,
 	}, nil
 
 }
@@ -130,11 +173,11 @@ func newWorkingItemForPrimitiveValue(v reflect.Value, tagOptions *util.JsonTagOp
 		return nil, ErrorUnknownData
 	}
 	// for primitive value, we need to check if we need to encode it into string
-	if !hasInterface && tagOptions != nil && tagOptions.StringEncode {
-		if tokenType != token.TOKEN_NULL {
-			tokenType = token.TOKEN_STRING
-		}
-	}
+	// if !hasInterface && tagOptions != nil && tagOptions.StringEncode {
+	// 	if tokenType != token.TOKEN_NULL {
+	// 		tokenType = token.TOKEN_STRING
+	// 	}
+	// }
 
 	return &workingItem{
 		reflectValue:  v,
@@ -164,7 +207,7 @@ func (t *tokenProvider) detectCyclicAccess(item *workingItem) error {
 	return nil
 }
 
-var _ constructor.TokenProvider = &tokenProvider{}
+var _ astbuilder.TokenProvider = &tokenProvider{}
 
 func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 
@@ -219,7 +262,7 @@ func (t *tokenProvider) GetNextTokenType() (token.TokenType, error) {
 		t.workingStack.Pop()
 		return item.tokenType, nil
 	default:
-		// for primitives, they will be pop when ReadXXX is requested, and we have already marked them visit
+		// for primitives, they will be pop when Value is created, and we will need to add meta or register plugin at that time
 		return item.tokenType, nil
 	}
 
@@ -235,7 +278,7 @@ func (t *tokenProvider) processArrayItem(item *workingItem) error {
 		if theTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
-		newItem, err := newContainerWorkingItem(fmt.Sprintf("%d", i), element, item, nil)
+		newItem, err := newContainerWorkingItem(fmt.Sprintf("%d", i), element, item, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -255,7 +298,7 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 
 		if valueTokenType == token.TOKEN_LEFT_BRACE || valueTokenType == token.TOKEN_LEFT_BRACKET {
 			// for none primitive type, we need to track the path
-			newItem, err := newContainerWorkingItem(val.FieldName, val.FieldValue, workItem, val.FieldJsonTag)
+			newItem, err := newContainerWorkingItem(val.FieldName, val.FieldValue, workItem, val.FieldJsonTag, val.ExtendTag)
 			if err != nil {
 				return err
 			}
@@ -267,6 +310,7 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 			}
 			t.workingStack.Push(newItem)
 		}
+		// the field is just field name not attach any tag options
 		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(val.FieldName), tokenType: token.TOKEN_STRING})
 	}
 	return nil
@@ -315,7 +359,7 @@ func (t *tokenProvider) processObjectItem(item *workingItem) error {
 }
 
 func (t *tokenProvider) ReadNull() error {
-	_, err := t.workingStack.Pop()
+	_, err := t.workingStack.Peek()
 	if err != nil {
 		return err
 	}
@@ -323,7 +367,7 @@ func (t *tokenProvider) ReadNull() error {
 	return nil
 }
 func (t *tokenProvider) ReadBool() (bool, error) {
-	item, err := t.workingStack.Pop()
+	item, err := t.workingStack.Peek()
 	if err != nil {
 		return false, err
 	}
@@ -333,35 +377,32 @@ func (t *tokenProvider) ReadBool() (bool, error) {
 }
 
 func (t *tokenProvider) ReadString() ([]byte, error) {
-	item, err := t.workingStack.Pop()
+	item, err := t.workingStack.Peek()
 	if err != nil {
 		return nil, err
 	}
 
-	// in this case the item.reflectValue is not string value.
-	if !item.hasInterface && item.tagOptions != nil && item.tagOptions.StringEncode {
+	// // in this case the item.reflectValue is not string value.
+	// if !item.hasInterface && item.tagOptions != nil && item.tagOptions.StringEncode {
 
-		val, err := util.EncodePrimitiveValue(item.reflectValue.Interface())
-		if err != nil {
-			return nil, err
-		}
-		v := util.EncodeToJsonString(string(val))
-		return v, nil
-	}
+	// 	val, err := util.EncodePrimitiveValue(item.reflectValue.Interface())
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	v := util.EncodeToJsonString(string(val))
+	// 	return v, nil
+	// }
 	v := util.EncodeToJsonString(item.reflectValue.String())
 	return v, nil
+
 }
 
 func (t *tokenProvider) ReadNumber() (interface{}, error) {
-	item, err := t.workingStack.Pop()
+	item, err := t.workingStack.Peek()
 	if err != nil {
 		return 0.0, err
 	}
-	val, err := convertNumberBaseOnKind(item.reflectValue)
-	if err != nil {
-		return 0.0, err
-	}
-	return val, nil
+	return item.reflectValue.Interface(), nil
 }
 
 func (t *tokenProvider) ReadVariable() ([]byte, error) {

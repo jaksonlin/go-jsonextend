@@ -1,7 +1,7 @@
 package tokenizer
 
 import (
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -15,7 +15,7 @@ func (i *ObjectState) GetMode() StateMode {
 	return OBJECT_MODE
 }
 
-func (i *ObjectState) ProcessData(provider constructor.TokenProvider) error {
+func (i *ObjectState) ProcessData(provider astbuilder.TokenProvider) error {
 
 	nextTokenType, err := provider.GetNextTokenType()
 	if err != nil {

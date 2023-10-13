@@ -121,6 +121,11 @@ func TestStringOptionMarshal(t *testing.T) {
 
 	ex := Example{"hello", 123, true, []byte("hello"), []byte("hello")}
 	var checker Example
+	data1, err := json.Marshal(ex)
+	if err != nil {
+		t.FailNow()
+	}
+	fmt.Println(data1)
 	data, err := testMarshaler(ex)
 	if err != nil {
 		t.FailNow()

@@ -2,7 +2,7 @@ package golang
 
 import (
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -10,7 +10,8 @@ type astGolangConstructor struct {
 	ast *ast.JsonextAST
 }
 
-var _ constructor.ASTManager = &astGolangConstructor{}
+var _ astbuilder.ASTStateManagement = (*astGolangConstructor)(nil)
+var _ astbuilder.NodeConstructor = (*astGolangConstructor)(nil)
 
 func newASTConstructor() *astGolangConstructor {
 	return &astGolangConstructor{
@@ -23,13 +24,15 @@ func (i *astGolangConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 	//routing base on symbol
 	switch b {
 	case token.TOKEN_LEFT_BRACE:
-		return i.ast.CreateNewASTNode(ast.AST_OBJECT, nil)
+		_, err := i.ast.CreateNewASTNode(ast.AST_OBJECT, nil)
+		return err
 	case token.TOKEN_LEFT_BRACKET:
-		return i.ast.CreateNewASTNode(ast.AST_ARRAY, nil)
+		_, err := i.ast.CreateNewASTNode(ast.AST_ARRAY, nil)
+		return err
 	case token.TOKEN_RIGHT_BRACKET:
 		fallthrough
 	case token.TOKEN_RIGHT_BRACE:
-		err := i.ast.EncloseLatestElements()
+		_, err := i.ast.EncloseLatestElements()
 		if err != nil {
 			return err
 		}
@@ -39,7 +42,7 @@ func (i *astGolangConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 	return nil
 }
 
-func (i *astGolangConstructor) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
+func (i *astGolangConstructor) CreateNodeWithValue(valueType ast.AST_NODETYPE, nodeValue interface{}) (ast.JsonNode, error) {
 	return i.ast.CreateNewASTNode(valueType, nodeValue)
 }
 

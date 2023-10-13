@@ -442,11 +442,14 @@ func (resolver *unmarshallResolver) VisitNullNode(node *ast.JsonNullNode) error 
 func (resolver *unmarshallResolver) VisitNumberNode(node *ast.JsonNumberNode) error {
 	if resolver.hasUnmarshaller {
 		// fast unmarshal instead of using interpreter for primitive values
-		numStr := strconv.FormatFloat(node.Value, 'f', -1, 64)
+		numStr, err := util.EncodePrimitiveValue(node.Value)
+		if err != nil {
+			return err
+		}
 		return resolver.resolveByCustomizePrimitiveUnmarshal([]byte(numStr))
 	}
-	realValue := resolver.convertNumberBaseOnKind(node.Value)
-	resolver.setValue(realValue)
+
+	resolver.setValue(node.Value)
 	return resolver.resolve()
 }
 

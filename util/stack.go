@@ -1,14 +1,8 @@
 package util
 
-import (
-	"errors"
-)
-
 const (
 	EMPTY_STACK = "Empty Stack"
 )
-
-var ErrorEndOfStack = errors.New("end of stack")
 
 type Stack[T any] struct {
 	s []T

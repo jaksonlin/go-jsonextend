@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -93,7 +92,11 @@ func (s *PrettyPrintVisitor) VisitStringNode(node *ast.JsonStringNode) error {
 }
 
 func (s *PrettyPrintVisitor) VisitNumberNode(node *ast.JsonNumberNode) error {
-	s.sb.WriteString(strconv.FormatFloat(node.Value, 'f', -1, 64))
+	f64, err := util.ConvertInterfaceNumberToFloat64(node.Value)
+	if err != nil {
+		return err
+	}
+	s.sb.WriteString(strconv.FormatFloat(f64, 'f', -1, 64))
 	return s.WriteSymbol()
 }
 
@@ -245,7 +248,7 @@ func ParseJsonExtendDocument(reader io.Reader, variables map[string]interface{})
 		return nil, err
 	}
 	if sm.GetASTBuilder().HasOpenElements() {
-		return nil, errors.New("invalid json")
+		return nil, ErrorInvalidJson
 	}
 	ast := sm.GetAST()
 	return PrettyInterpret(ast, variables, Marshal)

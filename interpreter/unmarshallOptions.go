@@ -74,55 +74,6 @@ func resolveStringVariable(stringVariable *ast.JsonExtendedStringWIthVariableNod
 
 }
 
-// json input value is always float64, convert to different numeric value based on out element kind
-func (resolver *unmarshallResolver) convertNumberBaseOnKind(value interface{}) interface{} {
-
-	switch resolver.outElementKind {
-	case reflect.Int:
-		return int(value.(float64))
-	case reflect.Int16:
-		return int16(value.(float64))
-	case reflect.Int32:
-		return int32(value.(float64))
-	case reflect.Int64:
-		return int64(value.(float64))
-	case reflect.Int8:
-		return int8(value.(float64))
-	case reflect.Float32:
-		return float32(value.(float64))
-	case reflect.Float64:
-		return value
-	case reflect.Uint:
-		return uint(value.(float64))
-	case reflect.Uint8:
-		return uint8(value.(float64))
-	case reflect.Uint16:
-		return uint16(value.(float64))
-	case reflect.Uint32:
-		return uint32(value.(float64))
-	case reflect.Uint64:
-		return uint64(value.(float64))
-	case reflect.Interface:
-		// map[xxx]interface{} keep it as it is
-		parentReceiverKind := resolver.parent.ptrToActualValue.Elem().Type().Kind()
-		if parentReceiverKind == reflect.Map || parentReceiverKind == reflect.Array || parentReceiverKind == reflect.Slice {
-			return value
-		}
-		floatVal, ok := value.(float64)
-		if ok {
-			if resolver.options.ensureInt {
-				return int(floatVal)
-			} else {
-				return floatVal
-			}
-		} else {
-			return value
-		}
-	default:
-		return value
-	}
-}
-
 func (resolver *unmarshallResolver) createMapKeyValueByMapKeyKind(value string) (reflect.Value, error) {
 	mapKeyType := resolver.ptrToActualValue.Elem().Type().Key()
 	mapKeyKind := mapKeyType.Kind()

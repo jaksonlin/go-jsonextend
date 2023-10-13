@@ -3,9 +3,9 @@ package tokenizer
 import (
 	"io"
 
-	"github.com/jaksonlin/go-jsonextend/constructor"
-	"github.com/jaksonlin/go-jsonextend/constructor/bytebase"
-	"github.com/jaksonlin/go-jsonextend/constructor/golang"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
+	"github.com/jaksonlin/go-jsonextend/astbuilder/bytebase"
+	"github.com/jaksonlin/go-jsonextend/astbuilder/golang"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -22,7 +22,7 @@ func NewTokenizerStateMachineFromGoData(obj interface{}) (*TokenizerStateMachine
 	return newTokenizerStateMachine(astMan), nil
 }
 
-func newTokenizerStateMachine(builder constructor.ASTBuilder) *TokenizerStateMachine {
+func newTokenizerStateMachine(builder astbuilder.ASTBuilder) *TokenizerStateMachine {
 
 	sm := TokenizerStateMachine{}
 	sm.astBuilder = builder

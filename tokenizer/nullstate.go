@@ -1,7 +1,7 @@
 package tokenizer
 
 import (
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 )
 
 type NullState struct {
@@ -14,7 +14,7 @@ func (i *NullState) GetMode() StateMode {
 	return NULL_MODE
 }
 
-func (i *NullState) ProcessData(provider constructor.TokenProvider) error {
+func (i *NullState) ProcessData(provider astbuilder.TokenProvider) error {
 	err := provider.ReadNull()
 	if err != nil {
 		return err

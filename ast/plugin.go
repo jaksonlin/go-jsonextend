@@ -1,17 +1,16 @@
 package ast
 
 type nodePlugins struct {
-	preVisitPlugins  []ASTNodePlugin
-	postVisitPlugins []ASTNodePlugin
+	plugins []ASTNodePlugin
 }
 
 func (plugin *nodePlugins) PreVisitPlugin(visitor JsonVisitor, node JsonNode) error {
-	if node.IsVisited() {
+	if len(plugin.plugins) == 0 {
 		return nil
 	}
+	for _, plugin := range plugin.plugins {
 
-	for _, p := range plugin.preVisitPlugins {
-		if err := p.PreVisitPlugin(visitor, node); err != nil {
+		if err := plugin.PreVisitPlugin(visitor, node); err != nil {
 			return err
 		}
 	}
@@ -19,60 +18,48 @@ func (plugin *nodePlugins) PreVisitPlugin(visitor JsonVisitor, node JsonNode) er
 }
 
 func (plugin *nodePlugins) PostVisitPlugin(visitor JsonVisitor, node JsonNode) error {
-
-	for _, p := range plugin.postVisitPlugins {
-		if err := p.PostVisitPlugin(visitor, node); err != nil {
+	if len(plugin.plugins) == 0 {
+		return nil
+	}
+	for _, plugin := range plugin.plugins {
+		if err := plugin.PostVisitPlugin(visitor, node); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (plugin *nodePlugins) RegisterPrevisitPlugin(p ASTNodePlugin) {
-	if plugin.preVisitPlugins == nil {
-		plugin.preVisitPlugins = make([]ASTNodePlugin, 0)
+func (plugin *nodePlugins) RegisterPlugin(p ASTNodePlugin) {
+	if plugin.plugins == nil {
+		plugin.plugins = make([]ASTNodePlugin, 0)
 	}
-	for _, item := range plugin.preVisitPlugins {
+	for _, item := range plugin.plugins {
 		if item.PluginName() == p.PluginName() {
 			return
 		}
 	}
-	plugin.preVisitPlugins = append(plugin.preVisitPlugins, p)
+	plugin.plugins = append(plugin.plugins, p)
 }
 
-func (plugin *nodePlugins) RegisterPostvisitPlugin(p ASTNodePlugin) {
-	if plugin.postVisitPlugins == nil {
-		plugin.postVisitPlugins = make([]ASTNodePlugin, 0)
+func (plugin *nodePlugins) RegisterPluginAtFirst(p ASTNodePlugin) {
+	if plugin.plugins == nil {
+		plugin.plugins = make([]ASTNodePlugin, 0)
+		plugin.plugins = append(plugin.plugins, p)
+		return
 	}
-	for _, item := range plugin.postVisitPlugins {
+	for i, item := range plugin.plugins {
 		if item.PluginName() == p.PluginName() {
-			return
+			plugin.plugins = append(plugin.plugins[:i], plugin.plugins[i+1:]...)
+			break
 		}
 	}
-	plugin.postVisitPlugins = append(plugin.postVisitPlugins, p)
+	plugin.plugins = append([]ASTNodePlugin{p}, plugin.plugins...)
 }
 
-func (plugin *nodePlugins) GetPrevisitPlugins() []ASTNodePlugin {
-	return plugin.preVisitPlugins
-}
-
-func (plugin *nodePlugins) GetPostvisitPlugins() []ASTNodePlugin {
-	return plugin.postVisitPlugins
-}
-
-func (plugin *nodePlugins) RemovePrevisitPlugin(name string) {
-	for i, p := range plugin.preVisitPlugins {
+func (plugin *nodePlugins) RemovePlugin(name string) {
+	for i, p := range plugin.plugins {
 		if p.PluginName() == name {
-			plugin.preVisitPlugins = append(plugin.preVisitPlugins[:i], plugin.preVisitPlugins[i+1:]...)
-			return
-		}
-	}
-}
-
-func (plugin *nodePlugins) RemovePostvisitPlugin(name string) {
-	for i, p := range plugin.postVisitPlugins {
-		if p.PluginName() == name {
-			plugin.postVisitPlugins = append(plugin.postVisitPlugins[:i], plugin.postVisitPlugins[i+1:]...)
+			plugin.plugins = append(plugin.plugins[:i], plugin.plugins[i+1:]...)
 			return
 		}
 	}

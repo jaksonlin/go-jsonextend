@@ -2,7 +2,7 @@ package tokenizer
 
 import (
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 
 	"io"
@@ -23,7 +23,7 @@ type TokenizerStateMachine struct {
 	// use a route table to route the default state other than a large switch case
 	defaultRoute map[token.TokenType]stateChangeFunc // replace of ToxxxState
 	// consturct the AST and check syntax when processing the token in the fly
-	astBuilder constructor.ASTBuilder
+	astBuilder astbuilder.ASTBuilder
 }
 
 func (i *TokenizerStateMachine) SwitchStateByToken(tokenType token.TokenType) error {
@@ -109,6 +109,6 @@ func (i *TokenizerStateMachine) GetAST() ast.JsonNode {
 	return i.astBuilder.GetAST()
 }
 
-func (i *TokenizerStateMachine) GetASTBuilder() constructor.ASTManager {
+func (i *TokenizerStateMachine) GetASTBuilder() astbuilder.ASTStateManagement {
 	return i.astBuilder
 }

@@ -1,6 +1,6 @@
 package tokenizer
 
-import "github.com/jaksonlin/go-jsonextend/constructor"
+import "github.com/jaksonlin/go-jsonextend/astbuilder"
 
 type StateMode uint
 
@@ -18,7 +18,7 @@ const (
 
 // common tokenizer implementation
 type Tokenizer interface {
-	ProcessData(provider constructor.TokenProvider) error
+	ProcessData(provider astbuilder.TokenProvider) error
 	GetMode() StateMode
 }
 

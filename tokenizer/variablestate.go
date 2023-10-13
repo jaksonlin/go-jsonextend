@@ -1,7 +1,7 @@
 package tokenizer
 
 import (
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -15,7 +15,7 @@ func (i *VariableState) GetMode() StateMode {
 	return VARIABLE_MODE
 }
 
-func (i *VariableState) ProcessData(provider constructor.TokenProvider) error {
+func (i *VariableState) ProcessData(provider astbuilder.TokenProvider) error {
 
 	variable, err := provider.ReadVariable()
 	if err != nil {

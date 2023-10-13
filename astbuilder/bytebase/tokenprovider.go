@@ -5,7 +5,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -21,7 +21,7 @@ func newTokenProvider(reader io.Reader) *tokenProvider {
 	}
 }
 
-var _ constructor.TokenProvider = &tokenProvider{}
+var _ astbuilder.TokenProvider = &tokenProvider{}
 
 func (t *tokenProvider) ReadBool() (bool, error) {
 	// in boolean state we will consume until it is the end of boolean.

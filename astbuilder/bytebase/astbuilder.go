@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
-	"github.com/jaksonlin/go-jsonextend/constructor"
+	"github.com/jaksonlin/go-jsonextend/astbuilder"
 	"github.com/jaksonlin/go-jsonextend/token"
 )
 
@@ -20,7 +20,7 @@ func NewASTByteBaseBuilder(reader io.Reader) *ASTByteBaseBuilder {
 	}
 }
 
-var _ constructor.ASTBuilder = &ASTByteBaseBuilder{}
+var _ astbuilder.ASTBuilder = &ASTByteBaseBuilder{}
 
 // put the store to syntax symbol here, to decouple the relation of reader and writer
 func (t *ASTByteBaseBuilder) GetNextTokenType() (token.TokenType, error) {
@@ -64,7 +64,8 @@ func (t *ASTByteBaseBuilder) RecordSyntaxSymbol(b token.TokenType) error {
 }
 
 func (t *ASTByteBaseBuilder) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
-	return t.astConstructor.RecordStateValue(valueType, nodeValue)
+	_, err := t.astConstructor.CreateNodeWithValue(valueType, nodeValue)
+	return err
 }
 
 func (i *ASTByteBaseBuilder) GetAST() ast.JsonNode {

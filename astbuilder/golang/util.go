@@ -56,21 +56,6 @@ func htmlEscape(s string) string {
 	return html.EscapeString(s)
 }
 
-// json input value is always float64, convert to different numeric value based on out element kind
-func convertNumberBaseOnKind(val reflect.Value) (float64, error) {
-
-	switch val.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return float64(val.Int()), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return float64(val.Uint()), nil
-	case reflect.Float32, reflect.Float64:
-		return val.Float(), nil
-	default:
-		return 0.0, ErrNotNumericValueField
-	}
-}
-
 func isUint8Array(v reflect.Value) bool {
 	if v.Kind() != reflect.Slice {
 		return false
