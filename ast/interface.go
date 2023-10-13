@@ -36,24 +36,59 @@ type JsonNode interface {
 	String() string
 	SetMeta(key string, value interface{})
 	GetMeta(key string) interface{}
+	AddPlugin(p ASTNodePlugin)
+	RemovePlugin(name string)
+	PrependPlugin(p ASTNodePlugin)
 }
 
+type ASTNodePluginFunc func(visitor JsonVisitor, pluginHolder JsonNode) error
+
 type ASTNodePlugin interface {
-	//
-	PreVisitPlugin(visitor JsonVisitor, pluginHolder JsonNode) error
-	PostVisitPlugin(visitor JsonVisitor, pluginHolder JsonNode) error
+	PreVisitPlugin(visitor JsonVisitor, node JsonNode) error
+	PostVisitPlugin(visitor JsonVisitor, node JsonNode) error
 	PluginName() string
 }
 
-type PluggableJsonNode interface {
-	JsonNode
-	AddPlugin(p ASTNodePlugin)
-	RemovePlugin(name string)
+type astNodePluginImpl struct {
+	preVisitFunc  ASTNodePluginFunc
+	postVisitFunc ASTNodePluginFunc
+	pluginName    string
+}
+
+var _ ASTNodePlugin = (*astNodePluginImpl)(nil)
+
+func NewASTNodePlugin(name string, preVisitFunc ASTNodePluginFunc, postVisitFunc ASTNodePluginFunc) ASTNodePlugin {
+	return &astNodePluginImpl{
+		preVisitFunc:  preVisitFunc,
+		postVisitFunc: postVisitFunc,
+		pluginName:    name,
+	}
+}
+
+func (p *astNodePluginImpl) PreVisitPlugin(visitor JsonVisitor, node JsonNode) error {
+	if p.preVisitFunc == nil {
+		return nil
+	}
+	return p.preVisitFunc(visitor, node)
+}
+
+func (p *astNodePluginImpl) PostVisitPlugin(visitor JsonVisitor, node JsonNode) error {
+	if p.postVisitFunc == nil {
+		return nil
+	}
+	return p.postVisitFunc(visitor, node)
+}
+
+func (p *astNodePluginImpl) PluginName() string {
+	return p.pluginName
 }
 
 type JsonCollectionNode interface {
 	JsonNode
 	Length() int
+	SetChildVisisted()
+	ResetVisisted()
+	IsChildVisited() bool
 }
 
 type JsonStringValueNode interface {

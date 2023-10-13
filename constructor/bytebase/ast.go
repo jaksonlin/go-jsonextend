@@ -11,7 +11,8 @@ type astByteBaseConstructor struct {
 	syntaxChecker *syntaxChecker
 }
 
-var _ constructor.ASTManager = &astByteBaseConstructor{}
+var _ constructor.ASTStateManagement = &astByteBaseConstructor{}
+var _ constructor.NodeConstructor = &astByteBaseConstructor{}
 
 func newASTConstructor() *astByteBaseConstructor {
 	return &astByteBaseConstructor{
@@ -26,10 +27,12 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 	switch b {
 	case token.TOKEN_LEFT_BRACE:
 		i.syntaxChecker.PushSymbol('{')
-		return i.ast.CreateNewASTNode(ast.AST_OBJECT, nil)
+		_, err := i.ast.CreateNewASTNode(ast.AST_OBJECT, nil)
+		return err
 	case token.TOKEN_LEFT_BRACKET:
 		i.syntaxChecker.PushSymbol('[')
-		return i.ast.CreateNewASTNode(ast.AST_ARRAY, nil)
+		_, err := i.ast.CreateNewASTNode(ast.AST_ARRAY, nil)
+		return err
 	case token.TOKEN_RIGHT_BRACKET:
 		i.syntaxChecker.PushSymbol(']')
 		// check syntax before manipulate the AST
@@ -37,7 +40,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 		if err != nil {
 			return err
 		}
-		err = i.ast.EncloseLatestElements()
+		_, err = i.ast.EncloseLatestElements()
 		if err != nil {
 			return err
 		}
@@ -48,7 +51,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 		if err != nil {
 			return err
 		}
-		err = i.ast.EncloseLatestElements()
+		_, err = i.ast.EncloseLatestElements()
 		if err != nil {
 			return err
 		}
@@ -62,7 +65,7 @@ func (i *astByteBaseConstructor) RecordSyntaxSymbol(b token.TokenType) error {
 	return nil
 }
 
-func (i *astByteBaseConstructor) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
+func (i *astByteBaseConstructor) CreateNodeWithValue(valueType ast.AST_NODETYPE, nodeValue interface{}) (ast.JsonNode, error) {
 	i.syntaxChecker.PushValue(valueType)
 	return i.ast.CreateNewASTNode(valueType, nodeValue)
 }

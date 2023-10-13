@@ -11,17 +11,9 @@ import (
 // golang plugin should implement:
 // string option, omit empty, byte slice to base64 and vice versa
 
-// string option plugin
-type stringOptionPlugin struct {
-}
+var stringOptPlugin ast.ASTNodePlugin = ast.NewASTNodePlugin(PLUGIN_STRING_ENCODE, stringOptionConversion, nil)
 
-var _ ast.ASTNodePlugin = &stringOptionPlugin{}
-
-func (plugin *stringOptionPlugin) PluginName() string {
-	return "string_option_plugin"
-}
-
-func (plugin *stringOptionPlugin) PreVisitPlugin(visitor ast.JsonVisitor, node ast.JsonNode) error {
+func stringOptionConversion(visitor ast.JsonVisitor, node ast.JsonNode) error {
 	// if node is visited, skip
 	if node.IsVisited() {
 		return nil
@@ -34,19 +26,15 @@ func (plugin *stringOptionPlugin) PreVisitPlugin(visitor ast.JsonVisitor, node a
 		if err != nil {
 			return err
 		}
-		tempNode.Value = val
+		tempNode.Value = util.EncodeToJsonString(string(val))
 	case *ast.JsonNumberNode:
 		val, err := util.EncodePrimitiveValue(instance.Value)
 		if err != nil {
 			return err
 		}
-		tempNode.Value = val
+		tempNode.Value = util.EncodeToJsonString(string(val))
 	case *ast.JsonStringNode:
-		strVal, err := instance.GetValue()
-		if err != nil {
-			return err
-		}
-		val, err := util.EncodePrimitiveValue(strVal)
+		val, err := util.EncodePrimitiveValue(string(instance.Value))
 		if err != nil {
 			return err
 		}
@@ -56,7 +44,7 @@ func (plugin *stringOptionPlugin) PreVisitPlugin(visitor ast.JsonVisitor, node a
 		if err != nil {
 			return err
 		}
-		tempNode.Value = val
+		tempNode.Value = util.EncodeToJsonString(string(val))
 	default:
 		return nil
 	}
@@ -64,19 +52,9 @@ func (plugin *stringOptionPlugin) PreVisitPlugin(visitor ast.JsonVisitor, node a
 	return visitor.VisitStringNode(&tempNode)
 }
 
-func (plugin *stringOptionPlugin) PostVisitPlugin(visitor ast.JsonVisitor, node ast.JsonNode) error {
-	return nil
-}
+var sliceConversionPlugin ast.ASTNodePlugin = ast.NewASTNodePlugin(PLUGIN_SLICE_CONVERSION, sliceByteConversion, nil)
 
-// string option plugin
-type byteSliceConversionPlugin struct {
-}
-
-func (plugin *byteSliceConversionPlugin) PluginName() string {
-	return "byte_slice_conversion_plugin"
-}
-
-func (plugin *byteSliceConversionPlugin) PluginVisitor(visitor ast.JsonVisitor, node ast.JsonNode) error {
+func sliceByteConversion(visitor ast.JsonVisitor, node ast.JsonNode) error {
 	// if node is visited, skip
 	if node.IsVisited() {
 		return nil
@@ -100,15 +78,16 @@ func (plugin *byteSliceConversionPlugin) PluginVisitor(visitor ast.JsonVisitor, 
 		for _, item := range instance.Value {
 			switch numNode := item.(type) {
 			case *ast.JsonNumberNode:
-				byteSlices = append(byteSlices, byte(numNode.OriginValue.(byte)))
+				byteSlices = append(byteSlices, byte(numNode.Value.(byte)))
 			default:
 				return nil
 			}
 		}
-		// hijack the node to visited
+
 		newStringNode := &ast.JsonStringNode{
 			Value: byteSlices,
 		}
+		// filp the flag to visited, and let the visitor receive value from a string node
 		node.SetVisited()
 		return visitor.VisitStringNode(newStringNode)
 	}
@@ -135,10 +114,9 @@ func arrayNodeFromStringNode(nodeValue string) (*ast.JsonArrayNode, error) {
 
 }
 
-type omitEmptyPlugin struct {
-}
+var omitEmptyPlugin ast.ASTNodePlugin = ast.NewASTNodePlugin(PLUGIN_OMITEMPTY, omitEmptyConversion, nil)
 
-func (plugin *omitEmptyPlugin) PluginVisitor(visitor ast.JsonVisitor, node ast.JsonNode) error {
+func omitEmptyConversion(visitor ast.JsonVisitor, node ast.JsonNode) error {
 	// this is a struct field, we need to omit it if the value is empty
 	node, ok := node.(*ast.JsonKeyValuePairNode)
 	if !ok {

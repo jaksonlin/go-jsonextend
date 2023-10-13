@@ -373,7 +373,7 @@ func EncodePrimitiveValue(v interface{}) ([]byte, error) {
 	case string:
 		return EncodeToJsonString(data), nil
 	case float32, float64:
-		return []byte(fmt.Sprintf("%f", v)), nil
+		return []byte(fmt.Sprintf("%g", v)), nil
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return []byte(fmt.Sprintf("%d", v)), nil
 	case bool:
@@ -388,4 +388,58 @@ func EncodePrimitiveValue(v interface{}) ([]byte, error) {
 	default:
 		return nil, ErrorUnsupportedDataKind
 	}
+}
+
+var ErrorUnsupportedDataKindConvertNumber = errors.New("unsupported data kind for number conversion")
+
+// json input value is always float64, convert to different numeric value based on out element kind
+func ConvertInterfaceNumberToFloat64(val interface{}) (float64, error) {
+
+	value := reflect.ValueOf(val)
+	if !value.IsValid() {
+		return 0, errors.New("input is nil")
+	}
+	switch value.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		// Continue to the conversion
+	default:
+		return 0, errors.New("input is not a number")
+	}
+	// Catch potential panics during the conversion
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		// Optionally log the panic message, e.g., using log package
+	// 		// log.Println("panic recovered:", r)
+	// 	}
+	// }()
+	f64Type := reflect.TypeOf(float64(0))
+	f64Value := value.Convert(f64Type)
+	return f64Value.Float(), nil
+}
+
+func ConvertInterfaceNumberToInt64(val interface{}) (int64, error) {
+	value := reflect.ValueOf(val)
+	if !value.IsValid() {
+		return 0, errors.New("input is nil")
+	}
+	switch value.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		// Continue to the conversion
+	default:
+		return 0, errors.New("input is not a number")
+	}
+	// Catch potential panics during the conversion
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		// Optionally log the panic message, e.g., using log package
+	// 		// log.Println("panic recovered:", r)
+	// 	}
+	// }()
+	i64Type := reflect.TypeOf(int64(0))
+	i64Value := value.Convert(i64Type)
+	return i64Value.Int(), nil
 }

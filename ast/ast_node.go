@@ -33,8 +33,7 @@ func NodeFactory(t AST_NODETYPE, value interface{}) (JsonNode, error) {
 		}, nil
 	case AST_NUMBER:
 		return &JsonNumberNode{
-			OriginValue: value,
-			Value:       value.(float64),
+			Value: value,
 		}, nil
 	case AST_BOOLEAN:
 		return &JsonBooleanNode{
@@ -67,6 +66,18 @@ type astNodeBase struct {
 	visited     bool
 	nodePlugins nodePlugins
 	meta        map[string]interface{}
+}
+
+func (node *astNodeBase) PrependPlugin(p ASTNodePlugin) {
+	node.nodePlugins.RegisterPluginAtFirst(p)
+}
+
+func (node *astNodeBase) AddPlugin(p ASTNodePlugin) {
+	node.nodePlugins.RegisterPlugin(p)
+}
+
+func (node *astNodeBase) RemovePlugin(name string) {
+	node.nodePlugins.RemovePlugin(name)
 }
 
 func (node *astNodeBase) SetMeta(key string, value interface{}) {
@@ -169,8 +180,7 @@ func (node *JsonStringNode) ToArrayNode() (*JsonArrayNode, error) {
 
 type JsonNumberNode struct {
 	astNodeBase
-	OriginValue interface{}
-	Value       float64
+	Value interface{}
 }
 
 var _ JsonNode = &JsonNumberNode{}
@@ -272,7 +282,7 @@ type JsonArrayNode struct {
 	Value []JsonNode
 }
 
-var _ JsonNode = &JsonArrayNode{}
+var _ JsonCollectionNode = &JsonArrayNode{}
 
 func (node *JsonArrayNode) GetNodeType() AST_NODETYPE {
 	return AST_ARRAY
@@ -308,6 +318,30 @@ func (node *JsonArrayNode) Length() int {
 
 func (node *JsonArrayNode) String() string {
 	return fmt.Sprintf("array node, length: %d\n", len(node.Value))
+}
+
+// set all the child nodes as visited, will not mark the node itself as visited, so that you can visit the array node for stateful purpose
+func (node *JsonArrayNode) SetChildVisisted() {
+	for _, n := range node.Value {
+		n.SetVisited()
+	}
+}
+
+// unset all the child's visisted state as well as the node's, so that you can revisit the array node again
+func (node *JsonArrayNode) ResetVisisted() {
+	node.UnsetVisited()
+	for _, n := range node.Value {
+		n.UnsetVisited()
+	}
+}
+
+func (node *JsonArrayNode) IsChildVisited() bool {
+	for _, n := range node.Value {
+		if !n.IsVisited() {
+			return false
+		}
+	}
+	return true
 }
 
 type JsonKeyValuePairNode struct {
@@ -360,7 +394,7 @@ type JsonObjectNode struct {
 	Value []*JsonKeyValuePairNode
 }
 
-var _ JsonNode = &JsonObjectNode{}
+var _ JsonCollectionNode = &JsonObjectNode{}
 
 func (node *JsonObjectNode) GetNodeType() AST_NODETYPE {
 	return AST_OBJECT
@@ -396,6 +430,30 @@ func (node *JsonObjectNode) Length() int {
 
 func (node *JsonObjectNode) String() string {
 	return fmt.Sprintf("object node, length: %d\n", len(node.Value))
+}
+
+// set all the child nodes as visited, will not mark the node itself as visited, so that you can visit the object node for stateful purpose
+func (node *JsonObjectNode) SetChildVisisted() {
+	for _, n := range node.Value {
+		n.SetVisited()
+	}
+}
+
+// unset all the child's visisted state as well as the node's, so that you can revisit the array node again
+func (node *JsonObjectNode) ResetVisisted() {
+	node.UnsetVisited()
+	for _, n := range node.Value {
+		n.UnsetVisited()
+	}
+}
+
+func (node *JsonObjectNode) IsChildVisited() bool {
+	for _, n := range node.Value {
+		if !n.IsVisited() {
+			return false
+		}
+	}
+	return true
 }
 
 type JsonExtendedVariableNode struct {

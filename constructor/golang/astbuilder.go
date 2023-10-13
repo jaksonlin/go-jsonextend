@@ -62,7 +62,18 @@ func (t *ASTGolangBaseBuilder) ReadVariable() ([]byte, error) {
 }
 
 func (t *ASTGolangBaseBuilder) RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error {
-	return t.astConstructor.RecordStateValue(valueType, nodeValue)
+	node, err := t.astConstructor.CreateNodeWithValue(valueType, nodeValue)
+	if err != nil {
+		return err
+	}
+	// we do peek for tokenizer's ReadValue, now we pop it out and add any meta/plugin if needed
+	valueWorkItem, err := t.provider.workingStack.Pop()
+	if err != nil {
+		return err
+	}
+	valueWorkItem.SetMetaAndPlugins(node)
+	return nil
+
 }
 
 func (i *ASTGolangBaseBuilder) GetAST() ast.JsonNode {

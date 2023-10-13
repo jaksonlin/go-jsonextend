@@ -14,8 +14,11 @@ type TokenProvider interface {
 	GetNextTokenType() (token.TokenType, error)
 }
 
-type ASTManager interface {
-	RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error
+type NodeConstructor interface {
+	CreateNodeWithValue(valueType ast.AST_NODETYPE, nodeValue interface{}) (ast.JsonNode, error)
+}
+
+type ASTStateManagement interface {
 	GetAST() ast.JsonNode
 	HasComplete() bool
 	TopElementType() (ast.AST_NODETYPE, error)
@@ -23,6 +26,7 @@ type ASTManager interface {
 }
 
 type ASTBuilder interface {
-	ASTManager
+	ASTStateManagement
 	TokenProvider
+	RecordStateValue(valueType ast.AST_NODETYPE, nodeValue interface{}) error
 }
