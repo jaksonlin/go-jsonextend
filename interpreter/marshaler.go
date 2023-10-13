@@ -1,14 +1,12 @@
 package interpreter
 
 import (
-	"errors"
-
 	"github.com/jaksonlin/go-jsonextend/tokenizer"
 )
 
 func marshal(v interface{}, depth int) ([]byte, error) {
 	if depth > maxDepth {
-		return nil, errors.New("recursion depth exceeded")
+		return nil, ErrorSelfCallTooDeep
 	}
 	sm, err := tokenizer.NewTokenizerStateMachineFromGoData(v)
 	if err != nil {
@@ -19,7 +17,7 @@ func marshal(v interface{}, depth int) ([]byte, error) {
 		return nil, err
 	}
 	if sm.GetASTBuilder().HasOpenElements() {
-		return nil, errors.New("invalid object")
+		return nil, ErrorInvalidJson
 	}
 	ast := sm.GetAST()
 	return InterpretAST(ast, nil, func(v interface{}) ([]byte, error) {

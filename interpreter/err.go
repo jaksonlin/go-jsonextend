@@ -85,6 +85,8 @@ var (
 	ErrorInvalidUnmarshalResult                        = errors.New("invalid unmarshal result")
 	ErrorInvalidTag                                    = errors.New("invalid json tag")
 	ErrorUnsupportedDataKind                           = errors.New("unsupported variable data kind")
+	ErrorInvalidJson                                   = errors.New("invalid json")
+	ErrorSelfCallTooDeep                               = errors.New("recursion depth exceeded")
 )
 
 type ErrorFieldNotExist struct {

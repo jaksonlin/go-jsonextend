@@ -1,7 +1,6 @@
 package util
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -363,8 +362,6 @@ func IsPrimitiveType(value reflect.Value) bool {
 	}
 }
 
-var ErrorUnsupportedDataKind = errors.New("unsupported variable data kind")
-
 func EncodePrimitiveValue(v interface{}) ([]byte, error) {
 	if v == nil {
 		return token.NullBytes, nil
@@ -386,18 +383,16 @@ func EncodePrimitiveValue(v interface{}) ([]byte, error) {
 	case interface{}:
 		return EncodePrimitiveValue(data)
 	default:
-		return nil, ErrorUnsupportedDataKind
+		return nil, ErrorVariableDataKind
 	}
 }
-
-var ErrorUnsupportedDataKindConvertNumber = errors.New("unsupported data kind for number conversion")
 
 // json input value is always float64, convert to different numeric value based on out element kind
 func ConvertInterfaceNumberToFloat64(val interface{}) (float64, error) {
 
 	value := reflect.ValueOf(val)
 	if !value.IsValid() {
-		return 0, errors.New("input is nil")
+		return 0, ErrorInputNil
 	}
 	switch value.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -405,7 +400,7 @@ func ConvertInterfaceNumberToFloat64(val interface{}) (float64, error) {
 		reflect.Float32, reflect.Float64:
 		// Continue to the conversion
 	default:
-		return 0, errors.New("input is not a number")
+		return 0, ErrorInputNotNumber
 	}
 	// Catch potential panics during the conversion
 	// defer func() {
@@ -422,7 +417,7 @@ func ConvertInterfaceNumberToFloat64(val interface{}) (float64, error) {
 func ConvertInterfaceNumberToInt64(val interface{}) (int64, error) {
 	value := reflect.ValueOf(val)
 	if !value.IsValid() {
-		return 0, errors.New("input is nil")
+		return 0, ErrorInputNil
 	}
 	switch value.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -430,7 +425,7 @@ func ConvertInterfaceNumberToInt64(val interface{}) (int64, error) {
 		reflect.Float32, reflect.Float64:
 		// Continue to the conversion
 	default:
-		return 0, errors.New("input is not a number")
+		return 0, ErrorInputNotNumber
 	}
 	// Catch potential panics during the conversion
 	// defer func() {

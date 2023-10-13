@@ -86,8 +86,8 @@ func (p *astNodePluginImpl) PluginName() string {
 type JsonCollectionNode interface {
 	JsonNode
 	Length() int
-	SetChildVisisted()
-	ResetVisisted()
+	SetChildVisited()
+	ResetVisited()
 	IsChildVisited() bool
 }
 

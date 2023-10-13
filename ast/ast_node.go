@@ -321,14 +321,14 @@ func (node *JsonArrayNode) String() string {
 }
 
 // set all the child nodes as visited, will not mark the node itself as visited, so that you can visit the array node for stateful purpose
-func (node *JsonArrayNode) SetChildVisisted() {
+func (node *JsonArrayNode) SetChildVisited() {
 	for _, n := range node.Value {
 		n.SetVisited()
 	}
 }
 
-// unset all the child's visisted state as well as the node's, so that you can revisit the array node again
-func (node *JsonArrayNode) ResetVisisted() {
+// unset all the child's visited state as well as the node's, so that you can revisit the array node again
+func (node *JsonArrayNode) ResetVisited() {
 	node.UnsetVisited()
 	for _, n := range node.Value {
 		n.UnsetVisited()
@@ -433,14 +433,14 @@ func (node *JsonObjectNode) String() string {
 }
 
 // set all the child nodes as visited, will not mark the node itself as visited, so that you can visit the object node for stateful purpose
-func (node *JsonObjectNode) SetChildVisisted() {
+func (node *JsonObjectNode) SetChildVisited() {
 	for _, n := range node.Value {
 		n.SetVisited()
 	}
 }
 
-// unset all the child's visisted state as well as the node's, so that you can revisit the array node again
-func (node *JsonObjectNode) ResetVisisted() {
+// unset all the child's visited state as well as the node's, so that you can revisit the array node again
+func (node *JsonObjectNode) ResetVisited() {
 	node.UnsetVisited()
 	for _, n := range node.Value {
 		n.UnsetVisited()

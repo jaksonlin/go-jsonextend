@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -249,7 +248,7 @@ func ParseJsonExtendDocument(reader io.Reader, variables map[string]interface{})
 		return nil, err
 	}
 	if sm.GetASTBuilder().HasOpenElements() {
-		return nil, errors.New("invalid json")
+		return nil, ErrorInvalidJson
 	}
 	ast := sm.GetAST()
 	return PrettyInterpret(ast, variables, Marshal)
