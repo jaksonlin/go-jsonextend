@@ -54,11 +54,6 @@ func (w *workingItem) SetMetaAndPlugins(node ast.JsonNode) {
 			}
 		}
 
-		if w.tagOptions.Omitempty {
-			// for omitEmpty, we will plug on the kvpair node directly, this will remove the push of k and v node
-			node.PrependPlugin(omitEmptyPlugin)
-		}
-
 	}
 
 }
