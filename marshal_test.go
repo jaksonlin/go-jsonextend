@@ -9,7 +9,6 @@ import (
 
 	"github.com/jaksonlin/go-jsonextend"
 	"github.com/jaksonlin/go-jsonextend/astbuilder/golang"
-	"github.com/jaksonlin/go-jsonextend/interpreter"
 )
 
 func TestMarshalObj(t *testing.T) {
@@ -252,7 +251,7 @@ func TestCustomizeMarshaller(t *testing.T) {
 		Name: "hello",
 	}
 
-	data, err := interpreter.MarshalIntoTemplate(item)
+	data, err := jsonextend.MarshalIntoTemplate(item)
 	if err != nil {
 		t.FailNow()
 	}
@@ -272,7 +271,7 @@ func TestCustomizeMarshallerStealSky1(t *testing.T) {
 		Name: "hello",
 	}
 
-	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+	data, err := jsonextend.MarshalWithVariables(item, map[string]interface{}{"var1": "my love"})
 	if err != nil {
 		t.FailNow()
 	}
@@ -292,7 +291,7 @@ func TestCustomizeMarshallerStealSky2(t *testing.T) {
 		Name: "hello",
 	}
 
-	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+	data, err := jsonextend.MarshalWithVariables(item, map[string]interface{}{"var1": "my love"})
 	if err != nil {
 		t.FailNow()
 	}
@@ -315,7 +314,7 @@ func TestCustomizeMarshallerStealSky3(t *testing.T) {
 		Name: someStruct{"ddd"},
 	}
 
-	data, err := interpreter.MarshalIntoTemplate(item)
+	data, err := jsonextend.MarshalIntoTemplate(item)
 	if err != nil {
 		t.FailNow()
 	}

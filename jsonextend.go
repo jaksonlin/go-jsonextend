@@ -20,3 +20,11 @@ func Unmarshal(reader io.Reader, variables map[string]interface{}, out interface
 func Marshal(v interface{}) ([]byte, error) {
 	return interpreter.Marshal(v)
 }
+
+func MarshalWithVariables(v interface{}, variables map[string]interface{}) ([]byte, error) {
+	return interpreter.MarshalWithVariables(v, variables)
+}
+
+func MarshalIntoTemplate(v interface{}) ([]byte, error) {
+	return interpreter.MarshalIntoTemplate(v)
+}

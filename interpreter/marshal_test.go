@@ -498,7 +498,7 @@ func TestCustomizeMarshallerVariable(t *testing.T) {
 		Name: "hello",
 	}
 
-	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+	data, err := interpreter.MarshalWithVariables(item, map[string]interface{}{"var1": "my love"})
 	if err != nil {
 		t.FailNow()
 	}
@@ -518,7 +518,7 @@ func TestCustomizeMarshallerKey(t *testing.T) {
 		Name: "hello",
 	}
 
-	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+	data, err := interpreter.MarshalWithVariables(item, map[string]interface{}{"var1": "my love"})
 	if err != nil {
 		t.FailNow()
 	}
@@ -541,7 +541,7 @@ func TestCustomizeMarshallerOnStruct(t *testing.T) {
 		Name: someStruct{"ddd"},
 	}
 
-	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "hello", "var2": "world"})
+	data, err := interpreter.MarshalWithVariables(item, map[string]interface{}{"var1": "hello", "var2": "world"})
 	if err != nil {
 		t.FailNow()
 	}
@@ -562,7 +562,7 @@ func TestCustomizeMarshallerOnStruct2(t *testing.T) {
 		Name: []int{1, 2, 3, 4, 5},
 	}
 
-	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "hello", "var2": "world"})
+	data, err := interpreter.MarshalWithVariables(item, map[string]interface{}{"var1": "hello", "var2": "world"})
 	if err != nil {
 		t.FailNow()
 	}

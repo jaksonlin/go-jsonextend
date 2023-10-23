@@ -31,7 +31,7 @@ func Marshal(v interface{}) ([]byte, error) {
 	return marshal(v, 1, nil, nil)
 }
 
-func MarshalWithVariable(v interface{}, variables map[string]interface{}) ([]byte, error) {
+func MarshalWithVariables(v interface{}, variables map[string]interface{}) ([]byte, error) {
 	return marshal(v, 1, variables, []astbuilder.TokenProviderOptions{golang.EnableJsonExtTag})
 }
 
