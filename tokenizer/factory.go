@@ -14,8 +14,8 @@ func NewTokenizerStateMachineFromIOReader(reader io.Reader) *TokenizerStateMachi
 	return newTokenizerStateMachine(astMan)
 }
 
-func NewTokenizerStateMachineFromGoData(obj interface{}) (*TokenizerStateMachine, error) {
-	astMan, err := golang.NewASTGolangBaseBuilder(obj)
+func NewTokenizerStateMachineFromGoData(obj interface{}, options []astbuilder.TokenProviderOptions) (*TokenizerStateMachine, error) {
+	astMan, err := golang.NewASTGolangBaseBuilder(obj, options)
 	if err != nil {
 		return nil, err
 	}

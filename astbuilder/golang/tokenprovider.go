@@ -59,12 +59,20 @@ func (w *workingItem) SetMetaAndPlugins(node ast.JsonNode) {
 }
 
 type tokenProvider struct {
-	rootOut      reflect.Value
-	workingStack *util.Stack[*workingItem]
-	visited      map[uintptr][]string // check visited when pop
+	rootOut          reflect.Value
+	workingStack     *util.Stack[*workingItem]
+	visited          map[uintptr][]string // check visited when pop
+	enableJsonExtTag bool
 }
 
-func newRootTokenProvider(out interface{}) (*tokenProvider, error) {
+func EnableJsonExtTag(provider astbuilder.TokenProvider) error {
+	if goProvider, ok := provider.(*tokenProvider); ok {
+		goProvider.enableJsonExtTag = true
+	}
+	return nil
+}
+
+func newRootTokenProvider(out interface{}, options []astbuilder.TokenProviderOptions) (*tokenProvider, error) {
 	s := util.NewStack[*workingItem]()
 	v := reflect.ValueOf(out)
 
@@ -78,11 +86,23 @@ func newRootTokenProvider(out interface{}) (*tokenProvider, error) {
 	}
 	s.Push(&workingItem{reflectValue: v, tokenType: tokenType, address: addr, path: []string{v.Kind().String()}, tagOptions: nil, hasInterface: hasInterface})
 
-	return &tokenProvider{
-		rootOut:      v,
-		workingStack: s,
-		visited:      make(map[uintptr][]string),
-	}, nil
+	provider := &tokenProvider{
+		rootOut:          v,
+		workingStack:     s,
+		visited:          make(map[uintptr][]string),
+		enableJsonExtTag: false,
+	}
+
+	if options != nil {
+		for _, opt := range options {
+			err := opt(provider)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return provider, nil
 }
 
 func canNilKind(k reflect.Kind) bool {
@@ -290,7 +310,7 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 		if valueTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
-		if val.ExtendTag != nil {
+		if t.enableJsonExtTag && val.ExtendTag != nil {
 			return t.createWorkItemFromExtensionTag(val, workItem)
 		}
 		if valueTokenType == token.TOKEN_LEFT_BRACE || valueTokenType == token.TOKEN_LEFT_BRACKET {

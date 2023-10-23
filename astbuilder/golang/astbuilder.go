@@ -11,8 +11,8 @@ type ASTGolangBaseBuilder struct {
 	provider       *tokenProvider
 }
 
-func NewASTGolangBaseBuilder(obj interface{}) (astbuilder.ASTBuilder, error) {
-	provider, err := newRootTokenProvider(obj)
+func NewASTGolangBaseBuilder(obj interface{}, options []astbuilder.TokenProviderOptions) (astbuilder.ASTBuilder, error) {
+	provider, err := newRootTokenProvider(obj, options)
 	if err != nil {
 		return nil, err
 	}

@@ -246,3 +246,219 @@ this will output
     "age" : 18
 }
 ```
+
+## Advance feature - JsonFlexMarshal
+
+use customize tag, one can marshal it with the extension syntax for downstream to interpret, this will be useful when you need to templating some field.
+
+to output the json extension format template, add the `jsonext` tag on the field and specified its key and value's variable represetative.
+
+when giving the property `k`, the key field of the json output will be replaced by the k's variable name,quoted in `"${...}"` as `STRING WITH VARIABLE`
+
+### JsonFlexMarshal - `k`
+
+``` golang
+func TestCustomizeMarshaller1(t *testing.T) {
+    type MyDataStruct struct {
+        Name string `jsonext:"k=var1"`
+    }
+    item := &MyDataStruct{
+        Name: "hello",
+    }
+
+    data, err := interpreter.MarshalIntoTemplate(item)
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"${var1}":"hello"}` {
+        t.FailNow()
+    }
+}
+```
+
+
+when both `json` tag and `jsonext` tag is applied the MarshalIntoTemplate will use the `k`'s variable name if it is set.
+
+``` golang
+func TestCustomizeMarshaller3Ext(t *testing.T) {
+    type MyDataStruct struct {
+        Name string `json:"myfield" jsonext:"k=var1"`
+    }
+    item := &MyDataStruct{
+        Name: "hello",
+    }
+
+    data, err := interpreter.MarshalIntoTemplate(item)
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"${var1}":"hello"}` {
+        t.FailNow()
+    }
+}
+```
+
+### JsonFlexMarshal - `v`
+
+when giving the property `v`, the value field of the json will be replaced by the variable name `${...}`. Note the differences is that 
+in this case it is a variable mark in the json extension syntax (this data format can only be parsed by go-jsonextend as this is not the standard json format)
+
+the reason not to quote the `${...}` with double quotation mark is that: we can later interpret it with any valid json data type: number/string/bool/null...
+
+``` golang
+func TestCustomizeMarshaller2(t *testing.T) {
+    type MyDataStruct struct {
+        Name string `jsonext:"v=var1"`
+    }
+    item := &MyDataStruct{
+        Name: "hello",
+    }
+
+    data, err := interpreter.MarshalIntoTemplate(item)
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"Name":${var1}}` {
+        t.FailNow()
+    }
+}
+```
+
+### JsonFlexMarshal - `k` & `v`
+
+it is also valid to give both properties, regardless of what the data type it is.
+
+``` golang
+func TestCustomizeMarshaller3(t *testing.T) {
+    type MyDataStruct struct {
+        Name string `jsonext:"k=var1,v=var2"`
+    }
+    item := &MyDataStruct{
+        Name: "hello",
+    }
+
+    data, err := interpreter.MarshalIntoTemplate(item)
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"${var1}":${var2}}` {
+        t.FailNow()
+    }
+}
+
+
+
+```
+
+### JsonFlexMarshal - Steal the Sky
+
+With the Marshal with variable support, you can easliy implement your json's unmarshal by replacing the corresponding field with variable,
+rather than wrighting the entire UnmarshalJson function.
+
+This can make the templating of json easy to manage.
+
+``` golang
+
+func TestCustomizeMarshallerStealSky1(t *testing.T) {
+    type MyDataStruct struct {
+        Name string `json:"myfield" jsonext:"v=var1"`
+    }
+    item := &MyDataStruct{
+        Name: "hello",
+    }
+
+    data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"myfield":"my love"}` {
+        t.FailNow()
+    }
+}
+
+func TestCustomizeMarshallerStealSky2(t *testing.T) {
+    type MyDataStruct struct {
+        Name string `json:"myfield" jsonext:"k=var1"`
+    }
+    item := &MyDataStruct{
+        Name: "hello",
+    }
+
+    data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"my love":"hello"}` {
+        t.FailNow()
+    }
+}
+```
+
+this  feature can be applied even though the field is an object/array.
+
+``` golang
+func TestCustomizeMarshallerOnStruct(t *testing.T) {
+    type someStruct struct {
+        Name2 string
+    }
+    type MyDataStruct struct {
+        Name someStruct `jsonext:"k=var1,v=var2"`
+    }
+    item := &MyDataStruct{
+        Name: someStruct{"ddd"},
+    }
+
+    data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "hello", "var2": "world"})
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"hello":"world"}` {
+        t.FailNow()
+    }
+}
+
+func TestCustomizeMarshallerOnStruct2(t *testing.T) {
+
+    type MyDataStruct struct {
+        Name []int `jsonext:"k=var1,v=var2"`
+    }
+    item := &MyDataStruct{
+        Name: []int{1, 2, 3, 4, 5},
+    }
+
+    data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "hello", "var2": "world"})
+    if err != nil {
+        t.FailNow()
+    }
+
+    fmt.Println(data)
+    fmt.Println(data)
+    if string(data) != `{"hello":"world"}` {
+        t.FailNow()
+    }
+}
+
+
+```
+
