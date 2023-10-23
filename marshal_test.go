@@ -9,6 +9,7 @@ import (
 
 	"github.com/jaksonlin/go-jsonextend"
 	"github.com/jaksonlin/go-jsonextend/astbuilder/golang"
+	"github.com/jaksonlin/go-jsonextend/interpreter"
 )
 
 func TestMarshalObj(t *testing.T) {
@@ -241,4 +242,87 @@ func TestOutput(t *testing.T) {
 		fmt.Println(err)
 	}
 	fmt.Println(string(result))
+}
+
+func TestCustomizeMarshaller(t *testing.T) {
+	type MyDataStruct struct {
+		Name string `jsonext:"k=var1,v=var2"`
+	}
+	item := &MyDataStruct{
+		Name: "hello",
+	}
+
+	data, err := interpreter.MarshalIntoTemplate(item)
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"${var1}":${var2}}` {
+		t.FailNow()
+	}
+}
+
+func TestCustomizeMarshallerStealSky1(t *testing.T) {
+	type MyDataStruct struct {
+		Name string `json:"myfield" jsonext:"v=var1"`
+	}
+	item := &MyDataStruct{
+		Name: "hello",
+	}
+
+	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"myfield":"my love"}` {
+		t.FailNow()
+	}
+}
+
+func TestCustomizeMarshallerStealSky2(t *testing.T) {
+	type MyDataStruct struct {
+		Name string `json:"myfield" jsonext:"k=var1"`
+	}
+	item := &MyDataStruct{
+		Name: "hello",
+	}
+
+	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"my love":"hello"}` {
+		t.FailNow()
+	}
+}
+
+func TestCustomizeMarshallerStealSky3(t *testing.T) {
+	type someStruct struct {
+		Name2 string
+	}
+	type MyDataStruct struct {
+		Name someStruct `jsonext:"k=var1,v=var2"`
+	}
+	item := &MyDataStruct{
+		Name: someStruct{"ddd"},
+	}
+
+	data, err := interpreter.MarshalIntoTemplate(item)
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"${var1}":${var2}}` {
+		t.FailNow()
+	}
 }

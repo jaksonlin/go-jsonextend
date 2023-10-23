@@ -13,7 +13,7 @@ type TokenProvider interface {
 	ReadVariable() ([]byte, error)
 	GetNextTokenType() (token.TokenType, error)
 }
-
+type TokenProviderOptions func(TokenProvider) error
 type NodeConstructor interface {
 	CreateNodeWithValue(valueType ast.AST_NODETYPE, nodeValue interface{}) (ast.JsonNode, error)
 }

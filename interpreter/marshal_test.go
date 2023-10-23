@@ -30,7 +30,7 @@ func TestMarshalObj(t *testing.T) {
 	// 	t.FailNow()
 	// }
 
-	sm, err := tokenizer.NewTokenizerStateMachineFromGoData(sample)
+	sm, err := tokenizer.NewTokenizerStateMachineFromGoData(sample, nil)
 	if err != nil {
 		t.FailNow()
 	}
@@ -421,7 +421,7 @@ func TestCustomizeMarshaller(t *testing.T) {
 		Name: "hello",
 	}
 
-	data, err := testMarshaler(item)
+	data, err := interpreter.MarshalIntoTemplate(item)
 	if err != nil {
 		t.FailNow()
 	}
@@ -453,6 +453,26 @@ func TestCustomizeMarshallerVariable(t *testing.T) {
 	}
 }
 
+func TestCustomizeMarshallerKey(t *testing.T) {
+	type MyDataStruct struct {
+		Name string `json:"myfield" jsonext:"k=var1"`
+	}
+	item := &MyDataStruct{
+		Name: "hello",
+	}
+
+	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "my love"})
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"my love":"hello"}` {
+		t.FailNow()
+	}
+}
+
 func TestCustomizeMarshallerOnStruct(t *testing.T) {
 	type someStruct struct {
 		Name2 string
@@ -464,7 +484,7 @@ func TestCustomizeMarshallerOnStruct(t *testing.T) {
 		Name: someStruct{"ddd"},
 	}
 
-	data, err := interpreter.Marshal(item)
+	data, err := interpreter.MarshalIntoTemplate(item)
 	if err != nil {
 		t.FailNow()
 	}

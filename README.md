@@ -246,3 +246,8 @@ this will output
     "age" : 18
 }
 ```
+
+### Advance feature
+
+use customize tag, one can marshal it with the extension syntax for downstream to interpret, this will be useful when you need to templating some field.
+

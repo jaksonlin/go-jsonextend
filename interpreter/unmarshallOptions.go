@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/jaksonlin/go-jsonextend/ast"
+	"github.com/jaksonlin/go-jsonextend/config"
 	"github.com/jaksonlin/go-jsonextend/util"
 )
 
@@ -19,7 +20,7 @@ type unmarshallOptions struct {
 
 func NewUnMarshallOptions(variables map[string]interface{}, marshaler ast.MarshalerFunc, unmarshaler ast.UnmarshalerFunc) *unmarshallOptions {
 	options := &unmarshallOptions{
-		ensureInt:     false,
+		ensureInt:     config.EnsureInt,
 		variables:     variables,
 		resolverStack: util.NewStack[*unmarshallResolver](),
 		marshaler:     marshaler,
