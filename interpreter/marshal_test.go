@@ -413,7 +413,7 @@ func TestStringOptionMarshalWithInterfacePointer(t *testing.T) {
 	}
 }
 
-func TestCustomizeMarshaller(t *testing.T) {
+func TestCustomizeMarshaller1(t *testing.T) {
 	type MyDataStruct struct {
 		Name string `jsonext:"k=var1,v=var2"`
 	}
@@ -433,6 +433,63 @@ func TestCustomizeMarshaller(t *testing.T) {
 	}
 }
 
+func TestCustomizeMarshaller2(t *testing.T) {
+	type MyDataStruct struct {
+		Name string `jsonext:"v=var1"`
+	}
+	item := &MyDataStruct{
+		Name: "hello",
+	}
+
+	data, err := interpreter.MarshalIntoTemplate(item)
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"Name":${var1}}` {
+		t.FailNow()
+	}
+}
+func TestCustomizeMarshaller3(t *testing.T) {
+	type MyDataStruct struct {
+		Name string `jsonext:"k=var1"`
+	}
+	item := &MyDataStruct{
+		Name: "hello",
+	}
+
+	data, err := interpreter.MarshalIntoTemplate(item)
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"${var1}":"hello"}` {
+		t.FailNow()
+	}
+}
+func TestCustomizeMarshaller3Ext(t *testing.T) {
+	type MyDataStruct struct {
+		Name string `json:"myfield" jsonext:"k=var1"`
+	}
+	item := &MyDataStruct{
+		Name: "hello",
+	}
+
+	data, err := interpreter.MarshalIntoTemplate(item)
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"${var1}":"hello"}` {
+		t.FailNow()
+	}
+}
 func TestCustomizeMarshallerVariable(t *testing.T) {
 	type MyDataStruct struct {
 		Name string `json:"myfield" jsonext:"v=var1"`
@@ -484,14 +541,35 @@ func TestCustomizeMarshallerOnStruct(t *testing.T) {
 		Name: someStruct{"ddd"},
 	}
 
-	data, err := interpreter.MarshalIntoTemplate(item)
+	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "hello", "var2": "world"})
 	if err != nil {
 		t.FailNow()
 	}
 
 	fmt.Println(data)
 	fmt.Println(data)
-	if string(data) != `{"${var1}":${var2}}` {
+	if string(data) != `{"hello":"world"}` {
+		t.FailNow()
+	}
+}
+
+func TestCustomizeMarshallerOnStruct2(t *testing.T) {
+
+	type MyDataStruct struct {
+		Name []int `jsonext:"k=var1,v=var2"`
+	}
+	item := &MyDataStruct{
+		Name: []int{1, 2, 3, 4, 5},
+	}
+
+	data, err := interpreter.MarshalWithVariable(item, map[string]interface{}{"var1": "hello", "var2": "world"})
+	if err != nil {
+		t.FailNow()
+	}
+
+	fmt.Println(data)
+	fmt.Println(data)
+	if string(data) != `{"hello":"world"}` {
 		t.FailNow()
 	}
 }
