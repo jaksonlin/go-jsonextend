@@ -4,7 +4,7 @@ import (
 	"github.com/jaksonlin/go-jsonextend/tokenizer"
 )
 
-func marshal(v interface{}, depth int) ([]byte, error) {
+func marshal(v interface{}, depth int, variables map[string]interface{}) ([]byte, error) {
 	if depth > maxDepth {
 		return nil, ErrorSelfCallTooDeep
 	}
@@ -20,11 +20,15 @@ func marshal(v interface{}, depth int) ([]byte, error) {
 		return nil, ErrorInvalidJson
 	}
 	ast := sm.GetAST()
-	return InterpretAST(ast, nil, func(v interface{}) ([]byte, error) {
-		return marshal(v, depth+1)
+	return InterpretAST(ast, variables, func(v interface{}) ([]byte, error) {
+		return marshal(v, depth+1, variables)
 	})
 }
 
 func Marshal(v interface{}) ([]byte, error) {
-	return marshal(v, 1)
+	return marshal(v, 1, nil)
+}
+
+func MarshalWithVariable(v interface{}, variables map[string]interface{}) ([]byte, error) {
+	return marshal(v, 1, variables)
 }

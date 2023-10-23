@@ -290,7 +290,9 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 		if valueTokenType == token.TOKEN_UNKNOWN {
 			return ErrorInvalidTypeOnExportedField
 		}
-
+		if val.ExtendTag != nil {
+			return t.createWorkItemFromExtensionTag(val, workItem)
+		}
 		if valueTokenType == token.TOKEN_LEFT_BRACE || valueTokenType == token.TOKEN_LEFT_BRACKET {
 			// for none primitive type, we need to track the path
 			newItem, err := newContainerWorkingItem(val.FieldName, val.FieldValue, workItem, val.FieldJsonTag, val.ExtendTag)
@@ -307,6 +309,25 @@ func (t *tokenProvider) flattenStruct(workItem *workingItem) error {
 		}
 		// the field is just field name not attach any tag options
 		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(val.FieldName), tokenType: token.TOKEN_STRING})
+	}
+	return nil
+}
+
+func (t *tokenProvider) createWorkItemFromExtensionTag(fieldInfo *util.JSONStructField, workItem *workingItem) error {
+	if len(fieldInfo.ExtendTag.FieldVariableValueName) != 0 {
+		// FOR tokena variable you do not need to encode as json string "\"${var}\"", but for string with variable you needs!
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(fmt.Sprintf("${%s}", fieldInfo.ExtendTag.FieldVariableValueName)), tokenType: token.TOKEN_VARIABLE})
+	} else {
+		newItem, err := newContainerWorkingItem(fieldInfo.FieldName, fieldInfo.FieldValue, workItem, fieldInfo.FieldJsonTag, fieldInfo.ExtendTag)
+		if err != nil {
+			return err
+		}
+		t.workingStack.Push(newItem)
+	}
+	if len(fieldInfo.ExtendTag.FieldVariableKeyName) != 0 {
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(fmt.Sprintf("${%s}", fieldInfo.ExtendTag.FieldVariableKeyName)), tokenType: token.TOKEN_STRING_WITH_VARIABLE})
+	} else {
+		t.workingStack.Push(&workingItem{reflectValue: reflect.ValueOf(fieldInfo.FieldName), tokenType: token.TOKEN_STRING})
 	}
 	return nil
 }
@@ -402,5 +423,11 @@ func (t *tokenProvider) ReadNumber() (interface{}, error) {
 
 func (t *tokenProvider) ReadVariable() ([]byte, error) {
 	// no golang datatype corresponding to variable now, maybe we can extend this later through tag or plugin
-	return nil, nil
+	item, err := t.workingStack.Peek()
+	if err != nil {
+		return nil, err
+	}
+	val := item.reflectValue.String()
+
+	return []byte(val), nil
 }

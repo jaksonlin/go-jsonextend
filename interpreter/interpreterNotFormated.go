@@ -112,6 +112,18 @@ func (s *standardVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedStri
 }
 
 func (s *standardVisitor) marshalAndStripQuotes(varVal interface{}) ([]byte, error) {
+	content, err := s.marshalVariableValue(varVal)
+	if err != nil {
+		return nil, err
+	}
+
+	if content[0] == '"' {
+		content = content[1 : len(content)-1]
+	}
+	return content, nil
+}
+
+func (s *standardVisitor) marshalVariableValue(varVal interface{}) ([]byte, error) {
 	var content []byte
 	if util.IsPrimitiveType(reflect.ValueOf(varVal)) {
 		c, err := util.EncodePrimitiveValue(varVal)
@@ -127,9 +139,6 @@ func (s *standardVisitor) marshalAndStripQuotes(varVal interface{}) ([]byte, err
 		content = c
 	}
 
-	if content[0] == '"' {
-		content = content[1 : len(content)-1]
-	}
 	return content, nil
 }
 
@@ -140,7 +149,7 @@ func (s *standardVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) 
 		s.sb.Write(node.Value)
 		return s.WriteSymbol()
 	}
-	content, err := s.marshalAndStripQuotes(varVal)
+	content, err := s.marshalVariableValue(varVal)
 	if err != nil {
 		return ErrorInterpretVariable
 	}

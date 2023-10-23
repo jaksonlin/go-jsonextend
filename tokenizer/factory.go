@@ -65,6 +65,10 @@ func newTokenizerStateMachine(builder astbuilder.ASTBuilder) *TokenizerStateMach
 			sm.currentState = sm.variableState
 			return nil
 		},
+		token.TOKEN_STRING_WITH_VARIABLE: func() error {
+			sm.currentState = sm.stringState
+			return nil
+		},
 	}
 	sm.currentState = sm.initState
 	return &sm

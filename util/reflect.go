@@ -88,7 +88,7 @@ func GetFieldNameAndOptions(jsonTag string) *JsonTagOptions {
 	return ret
 }
 
-var extendTagPattern = regexp.MustCompile(`\W(\w+=\w+)`)
+var extendTagPattern = regexp.MustCompile(`(\w+=\w+)`)
 
 func getExtensionTags(field reflect.StructField) *JsonExtendOptions {
 
@@ -112,6 +112,9 @@ func getExtensionTags(field reflect.StructField) *JsonExtendOptions {
 			ret.FieldVariableValueName = kv[1]
 		}
 
+	}
+	if len(ret.FieldVariableKeyName) == 0 && len(ret.FieldVariableValueName) == 0 {
+		return nil
 	}
 	return ret
 
