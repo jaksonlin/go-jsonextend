@@ -3,6 +3,7 @@ package interpreter
 import (
 	"bytes"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -120,13 +121,9 @@ func (s *PrettyPrintVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedS
 	for varName, varDollarName := range node.Variables {
 		varVal, ok := s.variables[varName]
 		if ok {
-			content, err := s.marshaler(varVal)
+			content, err := s.marshalAndStripQuotes(varVal)
 			if err != nil {
 				return ErrorInterpretVariable
-			}
-			// remove the json string's leading and trailing double quotation mark, otherwise you will get something ""value"", which is invalid string
-			if content[0] == '"' {
-				content = content[1 : len(content)-1]
 			}
 			result = bytes.ReplaceAll(result, varDollarName, content)
 		}
@@ -135,6 +132,37 @@ func (s *PrettyPrintVisitor) VisitStringWithVariableNode(node *ast.JsonExtendedS
 
 	s.sb.Write(result)
 	return s.WriteSymbol()
+}
+
+func (s *PrettyPrintVisitor) marshalAndStripQuotes(varVal interface{}) ([]byte, error) {
+	content, err := s.marshalVariableValue(varVal)
+	if err != nil {
+		return nil, err
+	}
+
+	if content[0] == '"' {
+		content = content[1 : len(content)-1]
+	}
+	return content, nil
+}
+
+func (s *PrettyPrintVisitor) marshalVariableValue(varVal interface{}) ([]byte, error) {
+	var content []byte
+	if util.IsPrimitiveType(reflect.ValueOf(varVal)) {
+		c, err := util.EncodePrimitiveValue(varVal)
+		if err != nil {
+			return nil, err
+		}
+		content = c
+	} else {
+		c, err := s.marshaler(varVal)
+		if err != nil {
+			return nil, err
+		}
+		content = c
+	}
+
+	return content, nil
 }
 
 func (s *PrettyPrintVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNode) error {
@@ -147,12 +175,9 @@ func (s *PrettyPrintVisitor) VisitVariableNode(node *ast.JsonExtendedVariableNod
 		s.sb.Write(node.Value)
 		return s.WriteSymbol()
 	} else {
-		content, err := Marshal(varVal)
+		content, err := s.marshalVariableValue(varVal)
 		if err != nil {
 			return ErrorInterpretVariable
-		}
-		if content[0] == '"' {
-			content = content[1 : len(content)-1]
 		}
 		s.sb.Write(content)
 	}
